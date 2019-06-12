@@ -1,0 +1,18 @@
+#!/bin/bash
+# Parses the input and returns the value for this outcome.
+errcho() {
+    echo ${@} >&2
+}
+
+if [ $# -ne 2 ]; then
+    errcho "Usage: $(basename ${0}) <Outcome> <CNT|%>"
+    exit 1
+fi
+case "${2}" in
+    "N")
+        grep "${1}" | grep -o '[0-9]*,' | grep -o '[0-9]*';;
+    "%")
+        grep "${1}" | grep -o '[0-9.]*%' | grep -o '[0-9.]*';;
+    *)
+        errcho "Bad Filter ${2}"; exit 1;;
+esac

@@ -1,0 +1,322 @@
+//-*- C++ -*-
+// Register definitions for the registers listed in user_regs_struct
+//
+// Copyright (C) 2019 Vasileios Porpodas <v.porpodas at gmail.com>
+//
+// This file is part of ZOFI.
+//
+// ZOFI is free software; you can redistribute it and/or modify it under
+// the terms of the GNU General Public License as published by the Free
+// Software Foundation; either version 2, or (at your option) any later
+// version.
+// GCC is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// for more details.
+// You should have received a copy of the GNU General Public License
+// along with GCC; see the file LICENSE.  If not see
+// <http://www.gnu.org/licenses/>.
+
+// Map the register strings provided by capstone (arch/X86/X86Mapping.c)
+// with the address in gpregs/fpregs (/usr/include/sys/user.h)
+// Size in bits found in capstone/arch/X86/X86Mapping.c
+
+
+// General purpose registers
+//
+//       Name,    Ptr in gpregs, StartBit, Bits
+// --------------------------------------------
+DEF_REG(r8,       &gpregs.r8,  0, 64) // 64 bits
+DEF_REG(r8d,      &gpregs.r8,  0, 32) // 32 bits
+DEF_REG(r8w,      &gpregs.r8,  0, 16) // 16 bits
+DEF_REG(r8b,      &gpregs.r8,  0,  8) //  8 bits
+
+DEF_REG(r9,       &gpregs.r9,  0, 64) // 64 bits
+DEF_REG(r9d,      &gpregs.r9,  0, 32) // 32 bits
+DEF_REG(r9w,      &gpregs.r9,  0, 16) // 16 bits
+DEF_REG(r9b,      &gpregs.r9,  0,  8) //  8 bits
+
+DEF_REG(r10,      &gpregs.r10, 0, 64) // 64 bits
+DEF_REG(r10d,     &gpregs.r10, 0, 32) // 32 bits
+DEF_REG(r10w,     &gpregs.r10, 0, 16) // 16 bits
+DEF_REG(r10b,     &gpregs.r10, 0,  8) //  8 bits
+
+DEF_REG(r11,      &gpregs.r11, 0, 64) // 64 bits
+DEF_REG(r11d,     &gpregs.r11, 0, 32) // 32 bits
+DEF_REG(r11w,     &gpregs.r11, 0, 16) // 16 bits
+DEF_REG(r11b,     &gpregs.r11, 0,  8) //  8 bits
+
+DEF_REG(r12,      &gpregs.r12, 0, 64) // 64 bits
+DEF_REG(r12d,     &gpregs.r12, 0, 32) // 32 bits
+DEF_REG(r12w,     &gpregs.r12, 0, 16) // 16 bits
+DEF_REG(r12b,     &gpregs.r12, 0,  8) //  8 bits
+
+DEF_REG(r13,      &gpregs.r13, 0, 64) // 64 bits
+DEF_REG(r13d,     &gpregs.r13, 0, 32) // 32 bits
+DEF_REG(r13w,     &gpregs.r13, 0, 16) // 16 bits
+DEF_REG(r13b,     &gpregs.r13, 0,  8) //  8 bits
+
+DEF_REG(r14,      &gpregs.r14, 0, 64) // 64 bits
+DEF_REG(r14d,     &gpregs.r14, 0, 32) // 32 bits
+DEF_REG(r14w,     &gpregs.r14, 0, 16) // 16 bits
+DEF_REG(r14b,     &gpregs.r14, 0,  8) //  8 bits
+
+DEF_REG(r15,      &gpregs.r15, 0, 64) // 64 bits
+DEF_REG(r15d,     &gpregs.r15, 0, 32) // 32 bits
+DEF_REG(r15w,     &gpregs.r15, 0, 16) // 16 bits
+DEF_REG(r15b,     &gpregs.r15, 0,  8) //  8 bits
+
+DEF_REG(rbp,      &gpregs.rbp, 0, 64)
+DEF_REG(ebp,      &gpregs.rbp, 0, 32)
+DEF_REG(bp,       &gpregs.rbp, 0, 16)
+DEF_REG(bpl,      &gpregs.rbp, 0,  8)
+DEF_REG(bph,      &gpregs.rbp, 8,  8) // Start at bit 8
+
+DEF_REG(rax,      &gpregs.rax, 0, 64)
+DEF_REG(eax,      &gpregs.rax, 0, 32)
+DEF_REG(ax,       &gpregs.rax, 0, 16)
+DEF_REG(al,       &gpregs.rax, 0,  8)
+DEF_REG(ah,       &gpregs.rax, 8,  8) // Start at bit 8
+
+DEF_REG(rbx,      &gpregs.rbx, 0, 64)
+DEF_REG(ebx,      &gpregs.rbx, 0, 32)
+DEF_REG(bx,       &gpregs.rbx, 0, 16)
+DEF_REG(bl,       &gpregs.rbx, 0,  8)
+DEF_REG(bh,       &gpregs.rbx, 8,  8) // Start at bit 8
+
+DEF_REG(rcx,      &gpregs.rcx, 0, 64)
+DEF_REG(ecx,      &gpregs.rcx, 0, 32)
+DEF_REG(cx,       &gpregs.rcx, 0, 16)
+DEF_REG(cl,       &gpregs.rcx, 0,  8)
+DEF_REG(ch,       &gpregs.rcx, 8,  8) // Start at bit 8
+
+DEF_REG(rdx,      &gpregs.rdx, 0, 64)
+DEF_REG(edx,      &gpregs.rdx, 0, 32)
+DEF_REG(dx,       &gpregs.rdx, 0, 16)
+DEF_REG(dl,       &gpregs.rdx, 0,  8)
+DEF_REG(dh,       &gpregs.rdx, 8,  8) // Start at bit 8
+
+DEF_REG(rdi,      &gpregs.rdi, 0, 64)
+DEF_REG(edi,      &gpregs.rdi, 0, 32)
+DEF_REG(di,       &gpregs.rdi, 0, 16)
+DEF_REG(dil,      &gpregs.rdi, 0,  8)
+DEF_REG(dih,      &gpregs.rdi, 8,  8) // Start at bit 8
+
+DEF_REG(rsi,      &gpregs.rsi, 0, 64)
+DEF_REG(esi,      &gpregs.rsi, 0, 32)
+DEF_REG(si,       &gpregs.rsi, 0, 16)
+DEF_REG(sil,      &gpregs.rsi, 0,  8)
+DEF_REG(sih,      &gpregs.rsi, 8,  8) // Start at bit 8
+
+DEF_REG(rsp,      &gpregs.rsp, 0, 64)
+DEF_REG(esp,      &gpregs.rsp, 0, 32)
+DEF_REG(sp,       &gpregs.rsp, 0, 16)
+DEF_REG(spl,      &gpregs.rsp, 0,  8)
+
+DEF_REG(orig_rax, &gpregs.orig_rax, 0, 64)
+
+DEF_REG(rip,      &gpregs.rip, 0, 64)
+DEF_REG(eip,      &gpregs.rip, 0, 32)
+DEF_REG(ip,       &gpregs.rip, 0, 16)
+
+DEF_REG(cs,       &gpregs.cs, 0, 16)
+DEF_REG(eflags,   &gpregs.eflags, 0, 32)
+DEF_REG(flags,    &gpregs.eflags, 0, 16)
+DEF_REG(rflags,   &gpregs.eflags, 0, 64)
+DEF_REG(ss,       &gpregs.ss, 0, 16)
+DEF_REG(fs_base,  &gpregs.fs_base, 0, 16) // Bits?
+DEF_REG(gs_base,  &gpregs.gs_base, 0, 16) // Bits?
+DEF_REG(ds,       &gpregs.ds, 0, 16)
+DEF_REG(es,       &gpregs.es, 0, 16)
+DEF_REG(fs,       &gpregs.fs, 0, 16)
+DEF_REG(gs,       &gpregs.gs, 0, 16)
+
+
+// Floating Point Registers (/usr/include/sys/user.h, 0)
+DEF_REG(cwd,       &fpregs.cwd, 0, 64) // Bits?
+DEF_REG(swd,       &fpregs.swd, 0, 64) // Bits?
+DEF_REG(ftw,       &fpregs.ftw, 0, 64) // Bits?
+DEF_REG(fop,       &fpregs.fop, 0, 64) // Bits?
+DEF_REG(fp_rip,    &fpregs.rip, 0, 64) // Bits?
+DEF_REG(rdp,       &fpregs.rdp, 0, 64) // Bits?
+DEF_REG(mxcsr,     &fpregs.mxcsr, 0, 64) // Bits?
+DEF_REG(mxcr_mask, &fpregs.mxcr_mask, 0, 64) // Bits?
+
+DEF_REG(st(0), &fpregs.st_space[0 * 2], 0, 80)
+DEF_REG(st(1), &fpregs.st_space[1 * 2], 0, 80)
+DEF_REG(st(2), &fpregs.st_space[2 * 2], 0, 80)
+DEF_REG(st(3), &fpregs.st_space[3 * 2], 0, 80)
+DEF_REG(st(4), &fpregs.st_space[4 * 2], 0, 80)
+DEF_REG(st(5), &fpregs.st_space[5 * 2], 0, 80)
+DEF_REG(st(6), &fpregs.st_space[6 * 2], 0, 80)
+DEF_REG(st(7), &fpregs.st_space[7 * 2], 0, 80)
+
+DEF_REG(mm0,   &fpregs.st_space[0 * 2], 0, 64)
+DEF_REG(mm1,   &fpregs.st_space[1 * 2], 0, 64)
+DEF_REG(mm2,   &fpregs.st_space[2 * 2], 0, 64)
+DEF_REG(mm3,   &fpregs.st_space[3 * 2], 0, 64)
+DEF_REG(mm4,   &fpregs.st_space[4 * 2], 0, 64)
+DEF_REG(mm5,   &fpregs.st_space[5 * 2], 0, 64)
+DEF_REG(mm6,   &fpregs.st_space[6 * 2], 0, 64)
+DEF_REG(mm7,   &fpregs.st_space[7 * 2], 0, 64)
+
+DEF_REG(fp0,   &fpregs.st_space[0 * 2], 0, 80)
+DEF_REG(fp1,   &fpregs.st_space[1 * 2], 0, 80)
+DEF_REG(fp2,   &fpregs.st_space[2 * 2], 0, 80)
+DEF_REG(fp3,   &fpregs.st_space[3 * 2], 0, 80)
+DEF_REG(fp4,   &fpregs.st_space[4 * 2], 0, 80)
+DEF_REG(fp5,   &fpregs.st_space[5 * 2], 0, 80)
+DEF_REG(fp6,   &fpregs.st_space[6 * 2], 0, 80)
+DEF_REG(fp7,   &fpregs.st_space[7 * 2], 0, 80)
+
+
+DEF_REG(xmm0,  &fpregs.xmm_space[0 * 4], 0, 128)
+DEF_REG(xmm1,  &fpregs.xmm_space[1 * 4], 0, 128)
+DEF_REG(xmm2,  &fpregs.xmm_space[2 * 4], 0, 128)
+DEF_REG(xmm3,  &fpregs.xmm_space[3 * 4], 0, 128)
+DEF_REG(xmm4,  &fpregs.xmm_space[4 * 4], 0, 128)
+DEF_REG(xmm5,  &fpregs.xmm_space[5 * 4], 0, 128)
+DEF_REG(xmm6,  &fpregs.xmm_space[6 * 4], 0, 128)
+DEF_REG(xmm7,  &fpregs.xmm_space[7 * 4], 0, 128)
+DEF_REG(xmm8,  &fpregs.xmm_space[8 * 4], 0, 128)
+DEF_REG(xmm9,  &fpregs.xmm_space[9 * 4], 0, 128)
+DEF_REG(xmm10, &fpregs.xmm_space[10 * 4], 0, 128)
+DEF_REG(xmm11, &fpregs.xmm_space[11 * 4], 0, 128)
+DEF_REG(xmm12, &fpregs.xmm_space[12 * 4], 0, 128)
+DEF_REG(xmm13, &fpregs.xmm_space[13 * 4], 0, 128)
+DEF_REG(xmm14, &fpregs.xmm_space[14 * 4], 0, 128)
+DEF_REG(xmm15, &fpregs.xmm_space[15 * 4], 0, 128)
+DEF_REG(xmm16, &fpregs.xmm_space[16 * 4], 0, 128)
+DEF_REG(xmm17, &fpregs.xmm_space[17 * 4], 0, 128)
+DEF_REG(xmm18, &fpregs.xmm_space[18 * 4], 0, 128)
+DEF_REG(xmm19, &fpregs.xmm_space[19 * 4], 0, 128)
+DEF_REG(xmm20, &fpregs.xmm_space[20 * 4], 0, 128)
+DEF_REG(xmm21, &fpregs.xmm_space[21 * 4], 0, 128)
+DEF_REG(xmm22, &fpregs.xmm_space[22 * 4], 0, 128)
+DEF_REG(xmm23, &fpregs.xmm_space[23 * 4], 0, 128)
+DEF_REG(xmm24, &fpregs.xmm_space[24 * 4], 0, 128)
+DEF_REG(xmm25, &fpregs.xmm_space[25 * 4], 0, 128)
+DEF_REG(xmm26, &fpregs.xmm_space[26 * 4], 0, 128)
+DEF_REG(xmm27, &fpregs.xmm_space[27 * 4], 0, 128)
+DEF_REG(xmm28, &fpregs.xmm_space[28 * 4], 0, 128)
+DEF_REG(xmm29, &fpregs.xmm_space[29 * 4], 0, 128)
+DEF_REG(xmm30, &fpregs.xmm_space[30 * 4], 0, 128)
+DEF_REG(xmm31, &fpregs.xmm_space[31 * 4], 0, 128)
+
+
+
+DEF_REG(ymm0, &fpregs.xmm_space[0 * 8], 0, 256)
+DEF_REG(ymm1, &fpregs.xmm_space[1 * 8], 0, 256)
+DEF_REG(ymm2, &fpregs.xmm_space[2 * 8], 0, 256)
+DEF_REG(ymm3, &fpregs.xmm_space[3 * 8], 0, 256)
+DEF_REG(ymm4, &fpregs.xmm_space[4 * 8], 0, 256)
+DEF_REG(ymm5, &fpregs.xmm_space[5 * 8], 0, 256)
+DEF_REG(ymm6, &fpregs.xmm_space[6 * 8], 0, 256)
+DEF_REG(ymm7, &fpregs.xmm_space[7 * 8], 0, 256)
+DEF_REG(ymm8, &fpregs.xmm_space[8 * 8], 0, 256)
+DEF_REG(ymm9, &fpregs.xmm_space[9 * 8], 0, 256)
+DEF_REG(ymm10, &fpregs.xmm_space[10 * 8], 0, 256)
+DEF_REG(ymm11, &fpregs.xmm_space[11 * 8], 0, 256)
+DEF_REG(ymm12, &fpregs.xmm_space[12 * 8], 0, 256)
+DEF_REG(ymm13, &fpregs.xmm_space[13 * 8], 0, 256)
+DEF_REG(ymm14, &fpregs.xmm_space[14 * 8], 0, 256)
+DEF_REG(ymm15, &fpregs.xmm_space[15 * 8], 0, 256)
+DEF_REG(ymm16, &fpregs.xmm_space[16 * 8], 0, 256)
+DEF_REG(ymm17, &fpregs.xmm_space[17 * 8], 0, 256)
+DEF_REG(ymm18, &fpregs.xmm_space[18 * 8], 0, 256)
+DEF_REG(ymm19, &fpregs.xmm_space[19 * 8], 0, 256)
+DEF_REG(ymm20, &fpregs.xmm_space[20 * 8], 0, 256)
+DEF_REG(ymm21, &fpregs.xmm_space[21 * 8], 0, 256)
+DEF_REG(ymm22, &fpregs.xmm_space[22 * 8], 0, 256)
+DEF_REG(ymm23, &fpregs.xmm_space[23 * 8], 0, 256)
+DEF_REG(ymm24, &fpregs.xmm_space[24 * 8], 0, 256)
+DEF_REG(ymm25, &fpregs.xmm_space[25 * 8], 0, 256)
+DEF_REG(ymm26, &fpregs.xmm_space[26 * 8], 0, 256)
+DEF_REG(ymm27, &fpregs.xmm_space[27 * 8], 0, 256)
+DEF_REG(ymm28, &fpregs.xmm_space[28 * 8], 0, 256)
+DEF_REG(ymm29, &fpregs.xmm_space[29 * 8], 0, 256)
+DEF_REG(ymm30, &fpregs.xmm_space[30 * 8], 0, 256)
+DEF_REG(ymm31, &fpregs.xmm_space[31 * 8], 0, 256)
+
+
+DEF_REG(zmm0,  &fpregs.xmm_space[0 * 16], 0, 512)
+DEF_REG(zmm1,  &fpregs.xmm_space[1 * 16], 0, 512)
+DEF_REG(zmm2,  &fpregs.xmm_space[2 * 16], 0, 512)
+DEF_REG(zmm3,  &fpregs.xmm_space[3 * 16], 0, 512)
+DEF_REG(zmm4,  &fpregs.xmm_space[4 * 16], 0, 512)
+DEF_REG(zmm5,  &fpregs.xmm_space[5 * 16], 0, 512)
+DEF_REG(zmm6,  &fpregs.xmm_space[6 * 16], 0, 512)
+DEF_REG(zmm7,  &fpregs.xmm_space[7 * 16], 0, 512)
+DEF_REG(zmm8,  &fpregs.xmm_space[8 * 16], 0, 512)
+DEF_REG(zmm9,  &fpregs.xmm_space[9 * 16], 0, 512)
+DEF_REG(zmm10, &fpregs.xmm_space[10 * 16], 0, 512)
+DEF_REG(zmm11, &fpregs.xmm_space[11 * 16], 0, 512)
+DEF_REG(zmm12, &fpregs.xmm_space[12 * 16], 0, 512)
+DEF_REG(zmm13, &fpregs.xmm_space[13 * 16], 0, 512)
+DEF_REG(zmm14, &fpregs.xmm_space[14 * 16], 0, 512)
+DEF_REG(zmm15, &fpregs.xmm_space[15 * 16], 0, 512)
+DEF_REG(zmm16, &fpregs.xmm_space[16 * 16], 0, 512)
+DEF_REG(zmm17, &fpregs.xmm_space[17 * 16], 0, 512)
+DEF_REG(zmm18, &fpregs.xmm_space[18 * 16], 0, 512)
+DEF_REG(zmm19, &fpregs.xmm_space[19 * 16], 0, 512)
+DEF_REG(zmm20, &fpregs.xmm_space[20 * 16], 0, 512)
+DEF_REG(zmm21, &fpregs.xmm_space[21 * 16], 0, 512)
+DEF_REG(zmm22, &fpregs.xmm_space[22 * 16], 0, 512)
+DEF_REG(zmm23, &fpregs.xmm_space[23 * 16], 0, 512)
+DEF_REG(zmm24, &fpregs.xmm_space[24 * 16], 0, 512)
+DEF_REG(zmm25, &fpregs.xmm_space[25 * 16], 0, 512)
+DEF_REG(zmm26, &fpregs.xmm_space[26 * 16], 0, 512)
+DEF_REG(zmm27, &fpregs.xmm_space[27 * 16], 0, 512)
+DEF_REG(zmm28, &fpregs.xmm_space[28 * 16], 0, 512)
+DEF_REG(zmm29, &fpregs.xmm_space[29 * 16], 0, 512)
+DEF_REG(zmm30, &fpregs.xmm_space[30 * 16], 0, 512)
+DEF_REG(zmm31, &fpregs.xmm_space[31 * 16], 0, 512)
+
+
+// Unsupported registers. These are skipped as they are not available to ptrace.
+DEF_REG(riz,      nullptr, 0, 64)
+DEF_REG(eiz,      nullptr, 0, 32)
+DEF_REG(fpsw,     nullptr, 0, 80)
+
+DEF_REG(cr0,      nullptr, 0, 64)
+DEF_REG(cr1,      nullptr, 0, 64)
+DEF_REG(cr2,      nullptr, 0, 64)
+DEF_REG(cr3,      nullptr, 0, 64)
+DEF_REG(cr4,      nullptr, 0, 64)
+DEF_REG(cr5,      nullptr, 0, 64)
+DEF_REG(cr6,      nullptr, 0, 64)
+DEF_REG(cr7,      nullptr, 0, 64)
+DEF_REG(cr8,      nullptr, 0, 64)
+DEF_REG(cr9,      nullptr, 0, 64)
+DEF_REG(cr10,     nullptr, 0, 64)
+DEF_REG(cr11,     nullptr, 0, 64)
+DEF_REG(cr12,     nullptr, 0, 64)
+DEF_REG(cr13,     nullptr, 0, 64)
+DEF_REG(cr14,     nullptr, 0, 64)
+DEF_REG(cr15,     nullptr, 0, 64)
+
+DEF_REG(dr0,      nullptr, 0, 64)
+DEF_REG(dr1,      nullptr, 0, 64)
+DEF_REG(dr2,      nullptr, 0, 64)
+DEF_REG(dr3,      nullptr, 0, 64)
+DEF_REG(dr4,      nullptr, 0, 64)
+DEF_REG(dr5,      nullptr, 0, 64)
+DEF_REG(dr6,      nullptr, 0, 64)
+DEF_REG(dr7,      nullptr, 0, 64)
+DEF_REG(dr8,      nullptr, 0, 64)
+DEF_REG(dr9,      nullptr, 0, 64)
+DEF_REG(dr10,     nullptr, 0, 64)
+DEF_REG(dr11,     nullptr, 0, 64)
+DEF_REG(dr12,     nullptr, 0, 64)
+DEF_REG(dr13,     nullptr, 0, 64)
+DEF_REG(dr14,     nullptr, 0, 64)
+DEF_REG(dr15,     nullptr, 0, 64)
+
+DEF_REG(k0,       nullptr, 0, 16)
+DEF_REG(k1,       nullptr, 0, 16)
+DEF_REG(k2,       nullptr, 0, 16)
+DEF_REG(k3,       nullptr, 0, 16)
+DEF_REG(k4,       nullptr, 0, 16)
+DEF_REG(k5,       nullptr, 0, 16)
+DEF_REG(k6,       nullptr, 0, 16)
+DEF_REG(k7,       nullptr, 0, 16)

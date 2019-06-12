@@ -1,0 +1,16 @@
+#!/bin/bash
+# Exits with 0 if stdin is greater than the argument
+errcho() {
+    echo ${@} >&2
+}
+
+if [ $# -ne 1 ]; then
+    errcho "Usage: $(basename ${0}) <NUM>"
+    exit 1
+fi
+res=$(awk "{ print (\$1 > ${1}) }")
+if [ "${res}" == "1" ]; then
+    exit 0
+else
+    exit 1
+fi

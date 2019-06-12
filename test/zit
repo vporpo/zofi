@@ -1,0 +1,239 @@
+#!/bin/bash
+# This is the ZIT tool: "ZOFI's Integrated Tester".
+#
+# Copyright (C) 2019 Vasileios Porpodas <v.porpodas at gmail.com>
+#
+# This file is part of ZOFI.
+#
+# ZOFI is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 2, or (at your option) any later
+# version.
+# GCC is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+# You should have received a copy of the GNU General Public License
+# along with GCC; see the file LICENSE.  If not see
+# <http://www.gnu.org/licenses/>.
+
+VERSION=0.1
+
+# Tools
+GREP=/usr/bin/grep
+SED=/usr/bin/sed
+TIMEOUT_BIN=/usr/bin/timeout
+
+# C compiler
+CC=cc
+# C++ compiler
+CXX=c++
+
+# If zofi takes longer than TIMEOUT seconds it will be killed
+# Set this to 0s for no timeout limit.
+TIMEOUT=20s
+
+ZIT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
+GREATER_THAN=${ZIT_DIR}/builtins/greater_than
+LESS_THAN=${ZIT_DIR}/builtins/less_than
+EQUALS=${ZIT_DIR}/builtins/equals
+GET_OUTCOME=${ZIT_DIR}/builtins/get_outcome
+
+errcho() {
+    echo ${@} >&2
+}
+
+die() {
+    errcho ${@}
+    exit 1
+}
+
+version() {
+    echo "ZIT Version ${VERSION}"
+}
+usage() {
+    echo "Usage: \
+$(basename ${0}) <test.zit> \
+[-zofi /path/to/zofi] \
+[-cc /path/to/c/compiler] \
+[-cxx /path/to/c++/compiler] \
+[-timeout <seconds>] \
+[-help] \
+"
+    exit 1
+}
+
+parse_args() {
+    ZOFI=${ZIT_DIR}/../build/zofi
+    GREP=/bin/grep
+    zitCnt=0
+    while [ "${1}" != "--" ]; do
+        # echo "Parsing:${1}"
+        case ${1} in
+            "-zofi") ZOFI=$2; shift;;
+            "-grep") GREP=$2; shift;;
+            "-cc") CC=$2; shift;;
+            "-cxx") CXX=$2; shift;;
+            "-timeout") TIMEOUT=$2; shift;;
+            "-help") usage;;
+            "-s") SILENT=1;;
+            "-version") version; exit 0;;
+            "--") break;;
+            *) zits[${zitCnt}]="${1}"
+               zitCnt=$((${zitCnt} + 1))
+               ;;
+        esac
+        shift
+    done
+    if [ "${SILENT}" != 1 ]; then
+        echo "-------------"
+        echo "zofi = ${ZOFI}"
+        echo "grep = ${GREP}"
+        echo "sed  = ${SED}"
+        echo "timeout = ${TIMEOUT_BIN}"
+        echo "CC   = ${CC}"
+        echo "CXX  = ${CXX}"
+        echo "zits = ${zits[@]}"
+        echo "-------------"
+    fi
+}
+
+check_args() {
+    if [ ! -f ${ZOFI} ]; then
+        die "Error: ZOFI not found in ${ZOFI}. Please specify path with -zofi <path/to/zofi>."
+    fi
+    if [ ${#zits[@]} -eq 0 ]; then
+        errcho "Error: Zit tests missing"
+        usage
+    fi
+}
+
+check_dependencies() {
+    ${GREP} --version > /dev/null 2> /dev/null || die "Bad grep: ${GREP}"
+    ${SED} --version  > /dev/null 2> /dev/null || die "Bad sed: ${SED}"
+    ${CC} --version   > /dev/null 2> /dev/null || die "Bad CC: ${CC}"
+    ${CXX} --version  > /dev/null 2> /dev/null || die "Bad CXX: ${CXX}"
+    ${TIMEOUT_BIN} --version  > /dev/null 2> /dev/null || die "Bad TIMEOUT_BIN: ${TIMEOUT_BIN}"
+}
+
+# Some very basic checks that the command is well-formed and does not contain
+# illegal stuff that can mess up with the exit status, like xargs.
+sanity_check_cmd() {
+    echo ${@} | grep -v "xargs" > /dev/null 2> /dev/null || die "Sanity check error: Please don't use xarg in the checking command: ${cmd}"
+}
+
+
+updateCounter() {
+    local cnt=${1}
+    local total=${2}
+    local clear=${3}
+    local counterFormat="%5d/%-5d"
+    # Clear if needed
+    if [ "${clear}" == "CLEAR" ]; then
+        printf "\b\b\b\b\b\b\b\b\b\b\b"
+    fi
+    printf "${counterFormat}" "${cnt}" "${total}"
+}
+
+main() {
+    parse_args ${@} --
+    check_args
+    check_dependencies
+
+    failedCnt=0
+    failedZits=()
+    numTests=${#zits[@]}
+    echo "--- testing ${numTests} tests ---"
+    zitCnt=0
+    local clear=DONT_CLEAR
+    while [ ${zitCnt} -lt ${numTests} ]; do
+        zit=${zits[${zitCnt}]}
+        if [ "${SILENT}" == 1 ]; then
+            updateCounter $((${zitCnt} + 1)) ${numTests} ${clear}
+            local clear="CLEAR"
+        fi
+        UNIQUE_FILE=/tmp/tmp.$(basename ${zit}).zit.tmp
+        [[ "${SILENT}" == 1 ]] || printf "\n%4d/%-4d: %s\n---------\n" $((${zitCnt}+1)) ${numTests} "${zit}"
+        local cmds=$(${GREP} '^//[[:space:]]*RUN:' < ${zit} | \
+                            sed "s|^//.*RUN:||g; \
+s|%THIS_FILE|${zit}|g; \
+s|%ZOFI|${TIMEOUT_BIN} ${TIMEOUT} ${ZOFI}|g; \
+s|%GREP|${GREP}|g; \
+s|%CC|${CC}|g; \
+s|%CXX|${CXX}|g; \
+s|%UNIQUE_FILE|${UNIQUE_FILE}|g; \
+s|%GREATER_THAN|${GREATER_THAN}|g; \
+s|%LESS_THAN|${LESS_THAN}|g; \
+s|%EQUALS|${EQUALS}|g; \
+s|%GET_OUTCOME|${GET_OUTCOME}|g; \
+")
+        local cmd
+        IFS=$'\n'
+        for cmd in ${cmds}; do
+            sanity_check_cmd "${cmd}"
+            [[ "${SILENT}" == 1 ]] || echo "${cmd}"
+            local error=0
+            # This is where we run the CMD.
+            eval "${cmd}"'; sv_pipestatus=${PIPESTATUS[@]}' >/dev/null 2> /dev/null
+            # CHECK 1/2
+            if [ $? -ne 0 ]; then
+                error=1
+            fi
+            # CHECK 2/2: We check the pipestatus of ${cmd}
+            [[ "${SILENT}" == 1 ]] || echo "PIPESTATUS: [${sv_pipestatus[@]}]"
+            SV_IFS=${IFS}
+            unset IFS
+            local status
+            for status in ${sv_pipestatus[@]}; do
+                if [ ${status} -ne 0 ]; then
+                    error=1
+                    break
+                fi
+            done
+            if [ $error -eq 0 ]; then
+                [[ "${SILENT}" == 1 ]] || echo "PASSED"
+            else
+                failedZits[${failedCnt}]=${zit};
+                failedCnt=$((${failedCnt} + 1))
+                errcho ""
+                errcho "FAILED #$((${zitCnt} + 1)) [${sv_pipestatus[@]}] : ${cmd}"
+                printf "\n"
+                if [ "${SILENT}" == 1 ]; then
+                    updateCounter $((${zitCnt} + 1)) ${numTests} DONT_CLEAR
+                fi
+            fi
+            IFS=${SV_FIS}
+        done
+        unset IFS
+        zitCnt=$((${zitCnt} + 1))
+    done
+
+    printf "\n"
+    numFailed=${#failedZits[@]}
+    # Print failed tests
+    if [ ${numFailed} -ne 0 ]; then
+        printf "\n\n"
+        echo "List of failed tests:"
+        echo "---------------------"
+        cnt=0
+        while [ ${cnt} -ne ${numFailed} ]; do
+            errcho "FAILED: ${failedZits[${cnt}]}"
+            cnt=$((${cnt} + 1))
+        done
+    fi
+
+    echo ""
+    echo "Total : ${numTests}"
+    echo "Failed: ${numFailed}"
+    echo ""
+
+    if [ ${numFailed} -ne 0 ]; then
+        errcho "Error: ${numFailed} failed test(s) found."
+        exit 1
+    else
+        echo "OK: All tests passed!"
+        exit 0
+    fi
+}
+
+main ${@}
