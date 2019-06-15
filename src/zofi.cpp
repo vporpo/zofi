@@ -32,6 +32,9 @@ int main(int argc, char **argv, char **envp) {
   // Parse command line arguments.
   Options.init(argc, argv);
 
+  // Initialize the random number generator.
+  randInit();
+
   // Print them on screen.
   Dbg(1) << "------ Options ------\n";
   Dbg(1) << Options.getValuesStr();

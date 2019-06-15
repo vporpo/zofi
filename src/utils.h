@@ -275,4 +275,7 @@ static inline bool isIn(const std::string &Haystack,
 /// Thread safe rand() returning a value in range [ 0, \p Max ).
 extern unsigned randSafe(unsigned Max = 0);
 
+/// Initialize seed for rand().
+extern void randInit();
+
 #endif // __UTILS_H__
