@@ -158,7 +158,7 @@ extern Option<std::string> InjectTo;
 extern Option<const char *> Binary;
 extern Option<const char **> Args;
 extern Option<unsigned> InjectionsPerRun;
-extern Option<long> UserInjectionTime;
+extern Option<double> UserInjectionTime;
 extern Option<int> MaxInjectionAttempts;
 extern Option<unsigned> TestRuns;
 extern Option<unsigned> Jobs;

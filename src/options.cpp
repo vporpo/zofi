@@ -45,10 +45,9 @@ Option<const char **> Args("-args", 0,
 Option<unsigned>
     InjectionsPerRun("-injections-per-run", 1,
                      "The number of fault injections per program run.");
-Option<long> UserInjectionTime("-injection-time", 0,
-                               "Fault injection should occur after this "
-                               "many us. (e.g.: -injection-time -1) or "
-                               "(e.g.: -injection-time 1000000)");
+Option<double> UserInjectionTime("-injection-time", 0.0,
+                                 "Fault injection should occur after this "
+                                 "many seconds");
 Option<int>
     MaxInjectionAttempts("-max-injection-attempts", 100,
                          "Stop trying to inject after this many attempts.");
