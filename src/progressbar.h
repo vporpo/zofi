@@ -62,6 +62,8 @@ class ProgressBar {
   void drawCounter(unsigned long Cnt) const;
 
 public:
+  /// \p Max is the maximum value represented by the counter. \p Size is the
+  /// width of the progress bar on the screen (number of characters).
   ProgressBar(unsigned long Max, unsigned Size, std::ostream &OS = std::cerr);
 
   /// Print the initial bar filled with blank spaces.

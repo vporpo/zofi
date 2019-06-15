@@ -56,7 +56,7 @@ template <typename RunnerT>
 void ThreadScheduler<RunnerT>::run(unsigned long TotalNumThreads,
                                    const ExecutionExitState *OrigExState,
                                    Statistics *Stats) {
-  ProgressBar Bar(TotalNumThreads, 40, std::cout);
+  ProgressBar Bar(TotalNumThreads, 30, std::cout);
   unsigned BarCnt = 0;
   bool ShowingBar = VerboseLevel.getValue() == 1 && !NoProgressBar.getValue();
   if (ShowingBar)

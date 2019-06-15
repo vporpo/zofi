@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <iomanip>
 #include <iostream>
 #include <pty.h>
 #include <signal.h>
@@ -277,5 +278,26 @@ extern unsigned randSafe(unsigned Max = 0);
 
 /// Initialize seed for rand().
 extern void randInit();
+
+/// Print \p Seconds in a human readable form (days, ours, minutes, seconds).
+static inline void prettyPrintTime(unsigned long Seconds, std::ostream &OS) {
+  const unsigned SecsInDay = 3600 * 24;
+  const unsigned SecsInHour = 3600;
+  const unsigned SecsInMin = 60;
+  const unsigned SecsInSec = 1;
+  bool PrintNext = false;
+  for (auto Pair :
+       {std::make_pair(SecsInDay, "d"), std::make_pair(SecsInHour, "h"),
+        std::make_pair(SecsInMin, "m"), std::make_pair(SecsInSec, "s")}) {
+    unsigned long SecondsInUnit = Pair.first;
+    const char *UnitStr = Pair.second;
+    if (Seconds > SecondsInUnit || PrintNext) {
+      unsigned long Unit = Seconds / SecondsInUnit;
+      OS << std::setw(2) << Unit << UnitStr;
+      Seconds -= Unit * SecondsInUnit;
+      PrintNext = true;
+    }
+  }
+}
 
 #endif // __UTILS_H__

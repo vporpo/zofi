@@ -35,6 +35,9 @@ void ProgressBar::drawCounter(unsigned long Cnt) const {
   OS << std::right << std::setw(RateSize) << std::setprecision(2) << std::fixed
      << Rate << "r/s ";
 
+  // ETA
+  prettyPrintTime((Max - Cnt) * Seconds / Cnt, OS);
+
   OS << std::right << std::setw(CounterSize) << Cnt << "/" << std::left
      << std::setw(CounterSize) << Max << ": ";
   OS.flush();
