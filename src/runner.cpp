@@ -409,8 +409,7 @@ bool Runner::doBitFlip() {
   }
 
   // If we are injecting the fault into a register that gets written, then step
-  // to
-  // the next instruction before inject it, otherwise the bitflip will be
+  // to the next instruction before inject it, otherwise the bitflip will be
   // overwritten by the output of the current instruction.
   dbg(3) << "Reg to be modified: " << Reg.dumpStr() << "\n";
   if (Reg.Written) {
