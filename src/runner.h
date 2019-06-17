@@ -32,7 +32,7 @@
 #include <vector>
 
 /// The injection status of the process.
-enum class Status {
+enum class FtStatus {
   None,      ///< Uninitialized.
   Masked,    ///< Fault was injected but was not detected in any way.
   Exception, ///< Triggered an exception.
@@ -65,17 +65,25 @@ protected:
   /// normally/signaled/stopped and the exit code/signal number).
   ExecutionExitState ExState;
 
+  /// The fault injection status of this run (Corruption, Masked, etc.).
+  FtStatus FaultInjectionStatus;
+
   /// Arguments for execve().
   std::vector<const char *> Argv;
 
   /// Env for execve().
   std::vector<const char *> Argp;
 
+  /// Remove temporary files.
+  bool DoCleanup = true;
+
   /// Check that the arguments are valid, or exit.
   void sanityChecksOrExit();
 
+public:
   /// Inspects the waitpid() \p Status and \returns the exit state.
   static ExitState getWaitPidExitState(int Status);
+protected:
 
   /// Close open terminal to avoid "too many open files" error.
   void closeOpenTerminal() const;
@@ -86,13 +94,16 @@ protected:
   ~RunnerBase();
 
 public:
-  RunnerBase(long Id);
+  RunnerBase(long Id, bool DoCleanup);
 
   /// \Returns the exit state.
   const ExecutionExitState &getExecutionExitState() const { return ExState; }
 
+  /// \Returns the exit state.
+  const FtStatus &getFtStatus() const { return FaultInjectionStatus; }
+
   /// Run the workload, wait for it to finish and set \p ThreadFinished to true.
-  virtual void runAndWait(bool *ThreadFinished, Statistics *Stats) = 0;
+  virtual void runAndWait() = 0;
 };
 
 /// Runner for the original program run. This collects the original (correct)
@@ -101,10 +112,10 @@ public:
 // This class launches binaries and
 class OrigRunner : public RunnerBase {
 public:
-  OrigRunner(long Id, const ExecutionExitState *OrigR);
+  OrigRunner(long Id, bool DoCleanup);
   /// In the original run we just run and wait to finish. No injection takes
   /// place, therefore there is no \p Stats to update.
-  void runAndWait(bool *ThreadFinished, Statistics *Stats) override;
+  void runAndWait() override;
 };
 
 /// Runner for the test program.
@@ -117,7 +128,10 @@ class Runner : public RunnerBase {
   bool SkipCheck = false;
 
   /// Wait until the child has stopped and return its status.
-  Status waitChildAndGetStatus();
+  FtStatus waitChildAndGetStatus();
+
+  /// Statistics collection.
+  Statistics *Stats = nullptr;
 
   /// Similar to system(), run \p Cmd, but using a custom \p Shell. \Returns
   /// true on success.
@@ -125,7 +139,7 @@ class Runner : public RunnerBase {
 
 public:
   /// Test runs need to access data from the original timed run in \p OrigR.
-  Runner(long Id, const ExecutionExitState *OrigExState = nullptr);
+  Runner(long Id, const ExecutionExitState *OrigExState, Statistics *Stats);
 
   /// Set injection time provided by user.
   void setUserInjectionTime(long UserInjectionTime);
@@ -134,8 +148,8 @@ public:
   double getRandomInjectionTime();
 
   /// Start the child process, inject the faults and wait for completion. When
-  /// finished, update \p Stats and set \p ThreadFinished to true.
-  void runAndWait(bool *ThreadFinished, Statistics *Stats) override;
+  /// finished update \p Stats.
+  void runAndWait() override;
 
   /// Start the injection threads. This blocks until all threads have joined.
   void launchInjectionThreads();

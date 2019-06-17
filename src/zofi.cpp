@@ -47,7 +47,7 @@ int main(int argc, char **argv, char **envp) {
 
   // Note: This holds the exit state of the original runs. So its lifetime
   // should reach the execution of the test runs.
-  ThreadScheduler<OrigRunner> OrigTS(true /* Keep Data */);
+  OrigJobScheduler OrigJS;
   // We run the original if we do not override either of: i. the bin execution
   // time, or ii. the exit state.
   if (!DisableTimingRun.getValue() &&
@@ -55,11 +55,11 @@ int main(int argc, char **argv, char **envp) {
     Dbg(1) << "-- Original (Timing) Run --\n";
 
     auto OrigStart = getTime();
-    // We spawn multiple threads even for the timing run, because modern
+    // We spawn multiple process jobs even for the timing run, because modern
     // processors will turbo-boost when running on a single thread.
-    unsigned NumOrigThreads = std::min(Jobs.getValue(), TestRuns.getValue());
+    unsigned NumOrigJobs = std::min(Jobs.getValue(), TestRuns.getValue());
 
-    OrigTS.run(NumOrigThreads);
+    OrigJS.run(NumOrigJobs);
 
     double Duration = getTimeDiff(OrigStart, getTime());
     Dbg(1).precision(3) << "Original Duration: " << Duration << "s\n\n";
@@ -72,8 +72,7 @@ int main(int argc, char **argv, char **envp) {
 
     Dbg(2) << " Time: " << BinExecTime.getValue() << "s.\n";
 
-    const OrigRunner *OrigR = OrigTS.getRunnerBack();
-    OrigState = OrigR->getExecutionExitState();
+    OrigState = OrigJS.getOrigExitState();
   }
 
   // Sanity check.
@@ -98,10 +97,19 @@ int main(int argc, char **argv, char **envp) {
 
   // Run all tests.
   Dbg(1) << "-- Test Runs --\n";
+
   auto TimeBeginTests = getTime();
-  ThreadScheduler<Runner> TS;
-  TS.run(TestRuns.getValue(), &OrigState, &Stats);
+  TestJobScheduler TestJS(&OrigState, &Stats);
+  TestJS.run(TestRuns.getValue());
   auto TimeEndTests = getTime();
+
+  // Remove temporary files of original run
+  if (!NoCleanup.getValue() && !SetOrigExitState.isSet())
+    for (const char *File :
+         {OrigState.getStdoutFile(), OrigState.getStderrFile()})
+      if (File[0] != '\0')
+        removeSafe(File);
+
   Stats.set<double>(Type::TestsExecTime,
                     getTimeDiff(TimeBeginTests, TimeEndTests));
 

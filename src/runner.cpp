@@ -36,7 +36,7 @@
 
 extern char **Envp; // zofi.cpp
 
-RunnerBase::RunnerBase(long Id) : Id(Id) {
+RunnerBase::RunnerBase(long Id, bool DoCleanup) : Id(Id), DoCleanup(DoCleanup) {
   // argv[0]
   Argv.push_back(Binary.getValue());
   // argv[1...last]
@@ -67,7 +67,7 @@ RunnerBase::~RunnerBase() {
   closeOpenTerminal();
 
   // Forced to skip temporary file removal.
-  if (NoCleanup)
+  if (NoCleanup.getValue() || !DoCleanup)
     return;
 
   // Remove temporary files.
@@ -194,10 +194,9 @@ void RunnerBase::closeOpenTerminal() const {
     closeSafe(ChildTerminalFd);
 }
 
-OrigRunner::OrigRunner(long Id, const ExecutionExitState *OrigExState)
-    : RunnerBase(-1) {}
+OrigRunner::OrigRunner(long Id, bool DoCleanup) : RunnerBase(-1, DoCleanup) {}
 
-void OrigRunner::runAndWait(bool *ThreadFinished, Statistics *Stats) {
+void OrigRunner::runAndWait() {
   // Start a timing run. Note: This is non-blocking.
   bool Success = run();
   if (!Success)
@@ -209,11 +208,9 @@ void OrigRunner::runAndWait(bool *ThreadFinished, Statistics *Stats) {
 
   ExState.setExitState(getWaitPidExitState(Status));
   dbg(2) << " ExitState=" << ExState.getExitState().getDumpStr() << "\n";
-
-  *ThreadFinished = true;
 }
 
-Status Runner::waitChildAndGetStatus() {
+FtStatus Runner::waitChildAndGetStatus() {
   // Wait until child process has finished (or early exited)
   dbg(2) << "Before waitpid()\n";
   int WaitStatus = waitpidSafe(ChildPID);
@@ -227,7 +224,7 @@ Status Runner::waitChildAndGetStatus() {
     // If it is not exited, kill it.
     if (ExState.getExitState().Type != ExitType::Exited)
       ptraceSafe(PTRACE_KILL, ChildPID, 0, 0);
-    return Status::Skipped;
+    return FtStatus::Skipped;
   }
 
   switch (ExState.getExitState().Type) {
@@ -238,15 +235,15 @@ Status Runner::waitChildAndGetStatus() {
     if (DetectionExitCode.getValue() > 0 &&
         ExState.getExitState().Val == DetectionExitCode.getValue()) {
       dbg(2) << "CHECK: Detected.\n";
-      return Status::Detected;
+      return FtStatus::Detected;
     }
     // Else, we need to check its state.
     if (checkOutput(ExState.getExitState())) {
       dbg(2) << "CHECK: Masked.\n";
-      return Status::Masked;
+      return FtStatus::Masked;
     } else {
       dbg(2) << "CHECK: Corrupted.\n";
-      return Status::Corrupted;
+      return FtStatus::Corrupted;
     }
     break;
   // The infinite loop signal may have stopped the child.
@@ -255,16 +252,16 @@ Status Runner::waitChildAndGetStatus() {
       dbg(2) << "CHECK: InfExec.\n";
       // Kill infinitely-looping child.
       ptraceSafe(PTRACE_KILL, ChildPID, 0, 0);
-      return Status::InfExec;
+      return FtStatus::InfExec;
     }
     // The original run may have stopped with a signal if the original
     // application is faulty. We therefore check the output here too.
     if (checkOutput(ExState.getExitState())) {
       dbg(2) << "CHECK: Masked.\n";
-      return Status::Masked;
+      return FtStatus::Masked;
     } else {
       dbg(2) << "CHECK: Exception.\n";
-      return Status::Exception;
+      return FtStatus::Exception;
     }
     break;
   // Since we attached to the child, it can't have terminated.
@@ -273,14 +270,16 @@ Status Runner::waitChildAndGetStatus() {
     break;
   default:
     assert(0 && "Unreachable: bad ExitState.Type");
-    return Status::None;
+    return FtStatus::None;
   }
   die("waitChild(): UNREACHABLE");
-  return Status::None;
+  return FtStatus::None;
 }
 
-Runner::Runner(long Id, const ExecutionExitState *OrigExState)
-    : RunnerBase(Id), OrigExState(OrigExState) {}
+Runner::Runner(long Id, const ExecutionExitState *OrigExState,
+               Statistics *Stats)
+    : RunnerBase(Id, true /* Cleanup */), OrigExState(OrigExState),
+      Stats(Stats) {}
 
 double Runner::getRandomInjectionTime() {
   assert(BinExecTime.isSet() && "Execution time not set");
@@ -291,37 +290,7 @@ double Runner::getRandomInjectionTime() {
   return Rand * BinExecTimeWithOvershoot;
 }
 
-/// Helper function for incrementing statistics for \p S.
-static void incrStatsCounter(Statistics *Stats, Status S) {
-  switch (S) {
-  case Status::None:
-    assert(0 && "Unreachable");
-    break;
-  case Status::Masked:
-    Stats->incr(Type::Masked);
-    break;
-  case Status::Exception:
-    Stats->incr(Type::Exception);
-    break;
-  case Status::InfExec:
-    Stats->incr(Type::InfExec);
-    break;
-  case Status::Corrupted:
-    Stats->incr(Type::Corrupted);
-    break;
-  case Status::Detected:
-    Stats->incr(Type::Detected);
-    break;
-  case Status::InjFailed:
-    Stats->incr(Type::InjFailed);
-    break;
-  case Status::Skipped:
-    Stats->incr(Type::Skipped);
-    break;
-  }
-}
-
-void Runner::runAndWait(bool *ThreadFinished, Statistics *Stats) {
+void Runner::runAndWait() {
   unsigned Attempts = MaxInjectionAttempts;
   bool InjectOK = false;
   do {
@@ -346,11 +315,7 @@ void Runner::runAndWait(bool *ThreadFinished, Statistics *Stats) {
   } while (!InjectOK && InjectionsPerRun.getValue() > 0);
 
   // Wait until the child has finished.
-  Status S = waitChildAndGetStatus();
-  incrStatsCounter(Stats, S);
-
-  // dbg(2) << getStatusStr(Status) << "\n";
-  *ThreadFinished = true;
+  FaultInjectionStatus = waitChildAndGetStatus();
 }
 
 bool Runner::stopChildAfter(double SleepTime) {
@@ -465,7 +430,7 @@ bool Runner::systemCustom(const char *Cmd, const char *Shell) {
   if (ChildPID == 0) {
     // Child process.
     if (!DiffDisableRedirect.getValue()) {
-      int DevNull = open("/dev/null", O_WRONLY);
+      int DevNull = openSafe("/dev/null", O_WRONLY);
       dup2(DevNull, 1);
       dup2(DevNull, 2);
     }

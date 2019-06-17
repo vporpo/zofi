@@ -21,85 +21,149 @@
 #include "progressbar.h"
 #include "runner.h"
 #include "statistics.h"
+#include <algorithm>
 
-template <typename RunnerT>
-ThreadLauncher<RunnerT>::ThreadLauncher(long Id,
-                                        const ExecutionExitState *OrigState,
-                                        Statistics *Stats)
-    : Id(Id), R(Id, OrigState), T(&RunnerT::runAndWait, &R, &Finished, Stats) {}
-
-template <typename RunnerT> ThreadLauncher<RunnerT>::~ThreadLauncher() {
-  T.join();
-}
-
-template <typename RunnerT>
-ThreadScheduler<RunnerT>::ThreadScheduler(bool KeepData) : KeepData(KeepData) {}
-
-template <typename RunnerT>
-unsigned ThreadScheduler<RunnerT>::tryJoinActiveThreads() {
-  unsigned CntJoined = 0;
-  for (auto It = ActiveThreads.begin(); It != ActiveThreads.end();) {
-    const auto &TPtr = *It;
-    if (TPtr->hasFinished()) {
-      if (KeepData)
-        KeptThreads.push_back(std::move(*It));
-      It = ActiveThreads.erase(It);
-      CntJoined++;
-      dbg(2) << "Thread joined\n";
-    } else
-      ++It;
+/// Helper function for incrementing statistics for \p S.
+static void incrStatsCounter(Statistics *Stats, FtStatus S) {
+  switch (S) {
+  case FtStatus::None:
+    assert(0 && "Unreachable");
+    break;
+  case FtStatus::Masked:
+    Stats->incr(Type::Masked);
+    break;
+  case FtStatus::Exception:
+    Stats->incr(Type::Exception);
+    break;
+  case FtStatus::InfExec:
+    Stats->incr(Type::InfExec);
+    break;
+  case FtStatus::Corrupted:
+    Stats->incr(Type::Corrupted);
+    break;
+  case FtStatus::Detected:
+    Stats->incr(Type::Detected);
+    break;
+  case FtStatus::InjFailed:
+    Stats->incr(Type::InjFailed);
+    break;
+  case FtStatus::Skipped:
+    Stats->incr(Type::Skipped);
+    break;
   }
-  return CntJoined;
 }
 
-template <typename RunnerT>
-void ThreadScheduler<RunnerT>::run(unsigned long TotalNumThreads,
-                                   const ExecutionExitState *OrigExState,
-                                   Statistics *Stats) {
-  ProgressBar Bar(TotalNumThreads, 30, std::cout);
+void OrigJobScheduler::jobFinishedParentCode(const JobData &Data) {
+  // The first run sets the OrigExitState to be used by the test runs.
+  if (Data.Id == 0)
+    read(Data.Pipe[0], &OrigExitState, sizeof(OrigExitState));
+}
+
+void TestJobScheduler::jobFinishedParentCode(const JobData &Data) {
+  // Get the fault injection status from child process.
+  FtStatus FaultStatus;
+  read(Data.Pipe[0], &FaultStatus, sizeof(FaultStatus));
+  incrStatsCounter(Stats, FaultStatus);
+}
+
+void JobSchedulerBase::waitForJob() {
+  int Status;
+  pid_t Pid = waitpid(-1, &Status, 0);
+  auto State = Runner::getWaitPidExitState(Status);
+  assert(WIFEXITED(Status) && "Expected child to have exited.");
+  auto HasPid = [&](const JobData &Data) { return Data.ChildPID == Pid; };
+  auto it = std::find_if(ActiveJobs.begin(), ActiveJobs.end(), HasPid);
+  assert(it != ActiveJobs.end() && "Pid not found in Active Jobs!");
+  int ChildPipe[2] = {it->Pipe[0], it->Pipe[1]};
+
+  jobFinishedParentCode(*it);
+
+  // Cleanup
+  close(ChildPipe[0]);
+  ActiveJobs.erase(it);
+}
+
+void JobSchedulerBase::run(unsigned long TotalNumJobs) {
+  ProgressBar Bar(TotalNumJobs, 30, std::cout);
   unsigned BarCnt = 0;
   bool ShowingBar = VerboseLevel.getValue() == 1 && !NoProgressBar.getValue();
   if (ShowingBar)
     Bar.init();
 
-  for (unsigned Id = 0; Id != TotalNumThreads; ++Id) {
-    // Busy loop until we can spawn a new thread.
-    unsigned CntJoined = 0;
-    while (ActiveThreads.size() == Jobs.getValue()) {
-      usleep(1000); // 1ms
-      CntJoined = tryJoinActiveThreads();
-    }
+  for (unsigned Id = 0; Id != TotalNumJobs; ++Id) {
+    // Block until we can spawn a new process.
+    while (ActiveJobs.size() == Jobs.getValue())
+      waitForJob();
 
     Dbg(2) << "-------------------------\n";
-    dbg(2) << "Thread " << Id << " begin\n";
+    dbg(2) << "Job " << Id << " begin\n";
+    Dbg(2) << "-------------------------\n";
 
     // Update the progress bar. Don't display it for Verbose > 1 as it will mess
     // up the dumps.
     if (ShowingBar)
-      for (unsigned Cnt = 0; Cnt != CntJoined; ++Cnt)
-        Bar.display(++BarCnt);
+      Bar.display(++BarCnt);
+
+    // Set up a pipe for communication from child to parent.
+    pipeSafe(Pipe);
+    ActiveJobs.push_back(JobData(Id, Pipe));
+
+    // Get a random seed for the child process.
+    unsigned SeedForChild = randSafe();
 
     // Launch thread and insert the ThreadLauncher into the set.
-    ActiveThreads.push_back(
-        std::make_unique<ThreadLauncher<RunnerT>>(Id, OrigExState, Stats));
+    pid_t ChildJobPID = forkSafe();
+    if (ChildJobPID == 0) {
+      // Child process
+      close(Pipe[0]);
+
+      // Initialize the rand() seed for this process with a random value.
+      setRandSeed(SeedForChild);
+
+      childJobCode(Id);
+
+      close(Pipe[1]);
+      exit(0);
+    } else if (ChildJobPID > 0) {
+      // Parent process.
+      close(Pipe[1]);
+      parentJobCode(Id);
+
+      ActiveJobs.back().ChildPID = ChildJobPID;
+    } else
+      die("Job fork() failed");
   }
   // Busy loop until all threads have joined.
-  while (!ActiveThreads.empty()) {
-    unsigned CntJoined = tryJoinActiveThreads();
+  while (ActiveJobs.size() > 0) {
+    waitForJob();
     if (ShowingBar)
-      for (unsigned Cnt = 0; Cnt != CntJoined; ++Cnt)
-        Bar.display(++BarCnt);
-    usleep(1000); // 1ms
+      Bar.display(++BarCnt);
   }
   if (ShowingBar) {
-    Bar.display(TotalNumThreads);
+    Bar.display(TotalNumJobs);
     Bar.finalize();
   }
 }
 
-template <typename RunnerT>
-const RunnerT *ThreadScheduler<RunnerT>::getRunnerBack() const {
-  assert(KeepData && "This only works if we have kept the thread data");
-  assert(!KeptThreads.empty() && "Nothing to return");
-  return &KeptThreads.back()->getRunner();
+void OrigJobScheduler::childJobCode(unsigned Id) {
+  // Child process.
+  OrigRunner OR(Id, NoCleanup);
+  OR.runAndWait();
+  // Send exit state to parent process.
+  auto ExState = OR.getExecutionExitState();
+  write(Pipe[1], &ExState, sizeof(ExState));
+}
+
+void OrigJobScheduler::parentJobCode(unsigned Id) {
+}
+
+void TestJobScheduler::childJobCode(unsigned Id) {
+  Runner TR(Id, OrigExState, Stats);
+  TR.runAndWait();
+  // Send this run's fault injection status to parent.
+  auto FaultStatus = TR.getFtStatus();
+  write(Pipe[1], &FaultStatus, sizeof(FaultStatus));
+}
+
+void TestJobScheduler::parentJobCode(unsigned Id) {
 }

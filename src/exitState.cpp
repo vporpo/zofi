@@ -80,10 +80,14 @@ void ExecutionExitState::import(const char *Str) {
   State.import(ExitTypeStr, Val);
 }
 
-bool ExecutionExitState::operator==(const ExecutionExitState &ESS2) const {
-  bool Same = defaultDiff(StdoutFd, ESS2.getStdoutFd()) &&
-              defaultDiff(StderrFd, ESS2.getStderrFd()) &&
-              State == ESS2.getExitState();
+bool ExecutionExitState::operator==(const ExecutionExitState &OtherState) const {
+  int OtherStdoutFd = openSafe(OtherState.getStdoutFile(), O_RDONLY);
+  int OtherStderrFd = openSafe(OtherState.getStderrFile(), O_RDONLY);
+  bool Same = defaultDiff(StdoutFd, OtherStdoutFd) &&
+              defaultDiff(StderrFd, OtherStderrFd) &&
+              State == OtherState.getExitState();
+  closeSafe(OtherStdoutFd);
+  closeSafe(OtherStderrFd);
   return Same;
 }
 

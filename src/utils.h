@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <iomanip>
 #include <iostream>
 #include <pty.h>
@@ -171,6 +172,14 @@ static inline int waitpidSafe(pid_t PID) {
   return Status;
 }
 
+/// Wrapper for open(). It will die() on failure.
+static inline int openSafe(const char *Path, int Flags) {
+  int Fd = open(Path, Flags);
+  if (Fd == -1)
+    die("Failed to open ", Path);
+  return Fd;
+}
+
 /// Safe close() wrapper that will die() on error.
 static inline void closeSafe(int Fd) {
   if (close(Fd) == -1) {
@@ -273,8 +282,11 @@ static inline bool isIn(const std::string &Haystack,
   return Haystack.find(Needle) != std::string::npos;
 }
 
-/// Thread safe rand() returning a value in range [ 0, \p Max ).
+/// Return a random number in [ 0, \p Max ).
 extern unsigned randSafe(unsigned Max = 0);
+
+/// Sets the seed for the random function.
+extern void setRandSeed(int Seed);
 
 /// Initialize seed for rand().
 extern void randInit();
@@ -300,4 +312,16 @@ static inline void prettyPrintTime(unsigned long Seconds, std::ostream &OS) {
   }
 }
 
+/// Safe wrapper for pipe.
+static inline void pipeSafe(int PipeFd[2]) {
+  if (pipe(PipeFd) != 0)
+    die("Pipe failed");
+}
+
+/// \Returns a readable timestamp (in ms).
+static inline unsigned long getTimestamp() {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::system_clock::now().time_since_epoch())
+      .count() % 65536;
+}
 #endif // __UTILS_H__

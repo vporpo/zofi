@@ -23,8 +23,6 @@
 #include <sys/types.h>
 
 unsigned randSafe(unsigned Max) {
-  static std::mutex Mtx;
-  std::lock_guard<std::mutex> Lock(Mtx);
   // Modulo should be good enough for low values of Max.
   return Max ? rand() % Max : rand();
 }
@@ -38,6 +36,10 @@ static unsigned int getUrandom() {
   if (read(Fd, &Num, 4) != 4)
     die("Failed to read 4 bytes from /dev/urandom");
   return Num;
+}
+
+void setRandSeed(int Seed) {
+  srand(Seed);
 }
 
 void randInit() {

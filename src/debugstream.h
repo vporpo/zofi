@@ -23,9 +23,11 @@
 
 #include <iostream>
 #include <mutex>
+#include "utils.h"
 
 /// Prefix the debug output with "function(): "
-#define dbg(LEVEL) (Dbg(LEVEL) << __FUNCTION__ << "(): ")
+#define dbg(LEVEL)                                                             \
+  (Dbg(LEVEL) << "[" << getTimestamp() << "] " << __FUNCTION__ << "(): ")
 
 /// Dbg is the debug output stream. We can control its verbosity by specifying
 /// the verbosity level in its constructor. For example:

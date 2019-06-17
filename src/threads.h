@@ -24,63 +24,89 @@
 #include "runner.h"
 #include "statistics.h"
 #include <thread>
-#include <vector>
+#include <set>
 
-/// Starts a runner thread and tracks when it finishes.
-template <typename RunnerT> class ThreadLauncher {
-  /// The index of this run. Used for debugging.
-  long Id = -1;
-  /// True if the thread has joined.
-  bool Finished = false;
-  /// The runner that will be launched.
-  RunnerT R;
-  /// The thread being executed.
-  std::thread T;
-
-public:
-  /// The \p OrigExState is the original run's exit state. \p Stats is used to
-  /// collect the injection statistics across all threads.
-  ThreadLauncher(long Id, const ExecutionExitState *OrigExState,
-                 Statistics *Stats);
-  ~ThreadLauncher();
-  /// \Returns true if the thread has finished.
-  bool hasFinished() const { return Finished; }
-  /// \Returns the runner.
-  const RunnerT &getRunner() const { return R; }
+/// Data for tracking the active jobs.
+struct JobData {
+  pid_t ChildPID = 0;
+  int Id = -1;
+  int Pipe[2] = {0, 0};
+  JobData(int Id, int Pipe2[2]) : Id(Id) {
+    Pipe[0] = Pipe2[0];
+    Pipe[1] = Pipe2[1];
+  }
 };
 
-template <typename RunnerT> class ThreadScheduler {
-  /// If this flag is set to true, it stops the thread data from being
-  /// destroyed, until the scheduler is destroyed.
-  bool KeepData = false;
-
-  /// Vector of finished threads.
-  std::vector<std::unique_ptr<ThreadLauncher<RunnerT>>> KeptThreads;
-
-  /// Set of active threads.
-  std::vector<std::unique_ptr<ThreadLauncher<RunnerT>>> ActiveThreads;
+/// Base class for scheduler classes.
+class JobSchedulerBase {
+protected:
+  /// ActiveJobs and their communication pipe.
+  std::vector<JobData> ActiveJobs;
 
   /// Check if any of the active threads can join and if so remove it from the
   /// active set. \Returns the number of threads joined.
   unsigned tryJoinActiveThreads();
 
-public:
-  /// If \p KeepData is true, we keep the thread data until this object is
-  /// destructed.
-  ThreadScheduler(bool KeepData = false);
-  /// Launch \p TotalNumThreads threads.
-  void run(unsigned long TotalNumThreads,
-           const ExecutionExitState *OrigExState = nullptr,
-           Statistics *Stats = nullptr);
+  /// Communication pipe from child to parent.
+  int Pipe[2];
 
-  /// \Returns the last runner in the kept data.
-  const RunnerT *getRunnerBack() const;
+  /// Wait for a job to finish and cleanup.
+  void waitForJob();
+
+  /// The code run right after the fork.
+  virtual void childJobCode(unsigned Id) = 0;
+
+  /// The code run by the parent.
+  virtual void parentJobCode(unsigned Id) = 0;
+
+  /// Parent code once job has finished.
+  virtual void jobFinishedParentCode(const JobData &Data) = 0;
+
+public:
+  JobSchedulerBase() = default;
+
+  /// Launch \p TotalNumThreads threads.
+  void run(unsigned long TotalNumThreads);
 };
 
-template class ThreadLauncher<OrigRunner>;
-template class ThreadScheduler<OrigRunner>;
+/// Scheduler for the original runs.
+class OrigJobScheduler : public JobSchedulerBase {
+  /// The exit state of the original run.
+  ExecutionExitState OrigExitState;
 
-template class ThreadLauncher<Runner>;
-template class ThreadScheduler<Runner>;
+  /// The child code run right after the fork.
+  void childJobCode(unsigned Id);
+
+  /// The parent code run after the fork.
+  void parentJobCode(unsigned Id);
+
+  void jobFinishedParentCode(const JobData &Data);
+
+public:
+  OrigJobScheduler() = default;
+
+  /// \Returns the exit state of the original run.
+  const ExecutionExitState &getOrigExitState() const { return OrigExitState; }
+};
+
+/// Scheduler for test runs.
+class TestJobScheduler : public JobSchedulerBase {
+  const ExecutionExitState *OrigExState = nullptr;
+
+  /// Statistics.
+  Statistics *Stats = nullptr;
+
+  /// The child code run right after the fork.
+  void childJobCode(unsigned Id);
+
+  /// The parent code run after the fork.
+  void parentJobCode(unsigned Id);
+
+  void jobFinishedParentCode(const JobData &Data);
+
+public:
+  TestJobScheduler(const ExecutionExitState *OrigExState, Statistics *Stats)
+      : OrigExState(OrigExState), Stats(Stats) {}
+};
 
 #endif //__THREADS_H__
