@@ -102,7 +102,7 @@ void JobSchedulerBase::run(unsigned long TotalNumJobs) {
     // Update the progress bar. Don't display it for Verbose > 1 as it will mess
     // up the dumps.
     if (ShowingBar)
-      Bar.display(++BarCnt);
+      Bar.display(BarCnt++);
 
     // Set up a pipe for communication from child to parent.
     pipeSafe(Pipe);
@@ -137,12 +137,10 @@ void JobSchedulerBase::run(unsigned long TotalNumJobs) {
   while (ActiveJobs.size() > 0) {
     waitForJob();
     if (ShowingBar)
-      Bar.display(++BarCnt);
+      Bar.display(BarCnt++);
   }
-  if (ShowingBar) {
-    Bar.display(TotalNumJobs);
+  if (ShowingBar)
     Bar.finalize();
-  }
 }
 
 void OrigJobScheduler::childJobCode(unsigned Id) {
