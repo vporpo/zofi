@@ -23,7 +23,7 @@ file(GLOB SOURCES *.cpp *.h *.def)
 add_executable(zofi ${SOURCES})
 
 set(BIN_NAME \"zofi\")
-set(VERSION \"0.9.2\")
+set(VERSION \"0.9.3\")
 configure_file (
   "${PROJECT_SOURCE_DIR}/config.h.in"
   "${PROJECT_BINARY_DIR}/config.h"
