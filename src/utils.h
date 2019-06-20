@@ -36,6 +36,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
+#include <execinfo.h>
 
 extern bool debugFlag;
 
@@ -56,8 +57,16 @@ extern bool debugFlag;
 
 #define DUMP_METHOD __attribute__((noinline)) __attribute__((__used__))
 
+/// Print the backtrace.
+static inline void printBacktrace() {
+  void *Buf[20];
+  backtrace(Buf, 20);
+  backtrace_symbols_fd(Buf, 20, STDERR_FILENO);
+}
+
 template <typename T> static inline void dieBase(const T &Val) {
   std::cerr << Val << "\n";
+  printBacktrace();
   abort();
 }
 
@@ -71,7 +80,8 @@ static inline void dieBase(const T &Val1, const Ts... Vals) {
 /// Exit the program, reporting a bug.
 #define die(...)                                                               \
   dieBase("Error in ", __FILE__, ":", __LINE__, " ", __FUNCTION__,             \
-          "(): ", __VA_ARGS__, " Please submit a bug report.")
+          "(): ", __VA_ARGS__,                                                 \
+          "\n\n*** Please submit a bug report with the following data ***\n")
 
 /// Program exit due to user error.
 #define userDie(...) dieBase(__VA_ARGS__)
