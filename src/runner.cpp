@@ -115,6 +115,9 @@ bool RunnerBase::run(bool TimeoutAlarm) {
   // Get the parent's pid
   ParentPID = getpid();
 
+  // Reset the active thread PIDs.
+  ChildThreads.clear();
+
   dbg(2) << "ParentPID " << ParentPID << "\n";
 
   if (!NoRedirect.getValue()) {
@@ -176,16 +179,91 @@ bool RunnerBase::run(bool TimeoutAlarm) {
 
     // Wait for the child to stop at execve, since it is being traced.
     waitpidSafe(ChildPID);
+
     // Let the child continue after execve.
     // This can fail if the child finishes immediately.
-    if (ptrace(PTRACE_CONT, ChildPID, 0, 0) == -1)
+    if (ptrace(PTRACE_SETOPTIONS, ChildPID, 0, PTRACE_O_TRACECLONE) == -1)
       return false;
+
+    ptraceSafe(PTRACE_CONT, ChildPID, 0, 0);
     return true;
   } else {
     // We should never reach here.
     die("fork() failed");
   }
   return true;
+}
+
+WaitPidData RunnerBase::waitpidSkipThreadState() {
+  bool ThreadStateChanged = false;
+  int Status = 0;
+  pid_t PidWaited = 0;
+  do {
+    const auto &StatusPid = waitpidSafe(-1);
+    Status = StatusPid.Status;
+    PidWaited = StatusPid.Pid;
+    dbg(2) << "After waitpid, PidWaited " << PidWaited << "\n";
+    ThreadStateChanged = false;
+    // Check if we are being stopped by changes in thread status.
+    if (WIFSTOPPED(Status) &&
+        Status >> 8 == (SIGTRAP | (PTRACE_EVENT_CLONE << 8))) {
+      pid_t ChildThread;
+      ptraceSafe(PTRACE_GETEVENTMSG, PidWaited, 0, &ChildThread);
+      dbg(2) << "New Child Thread " << ChildThread << " PID Waited "
+             << PidWaited << "\n";
+      // Update the active threads set.
+      ChildThreads.insert(ChildThread);
+      dumpChildThreads();
+      ThreadStateChanged = true;
+
+      ptraceSafe(PTRACE_CONT, ChildPID, 0, 0);
+    }
+    // This is the stopped child. We need to let it continue.
+    else if (ChildThreads.count(PidWaited)) {
+      if (WIFSTOPPED(Status) && WSTOPSIG(Status) == SIGSTOP) {
+        dbg(2) << "ChildThread " << PidWaited << " STOPPED, let it continue\n";
+        ptraceSafe(PTRACE_CONT, PidWaited, 0, 0);
+        ThreadStateChanged = true;
+      }
+      // Remove thread from active set.
+      else if (WIFEXITED(Status)) {
+        dbg(2) << "Child Thread " << PidWaited << " Exited\n";
+        ChildThreads.erase(PidWaited);
+        ThreadStateChanged = true;
+      } else if (WIFSIGNALED(Status)) {
+        dbg(2) << "Child Thread " << PidWaited << " Signaled\n";
+        ChildThreads.erase(PidWaited);
+        ThreadStateChanged = true;
+      }
+    }
+  } while (ThreadStateChanged);
+  return {Status, PidWaited};
+}
+
+void RunnerBase::dumpChildThreads() const {
+  dbg(2) << "ChildThreads: ";
+  for (pid_t ChildThreadPID : ChildThreads)
+    Dbg(2) << ChildThreadPID << ", ";
+  Dbg(2) << "\n";
+}
+
+pid_t RunnerBase::getRandomChildThreadPID() const {
+  dumpChildThreads();
+
+  unsigned RandomCnt = randSafe(ChildThreads.size() + 1);
+  dbg(2) << "RandomCnt=" << RandomCnt << "\n";
+  // ChildPID is not in ChildThreads. So it needs special treatment.
+  if (RandomCnt == 0)
+    return ChildPID;
+  // Return one of the active child threads.
+  RandomCnt--;
+  for (pid_t ChildThreadPID : ChildThreads)
+    if (RandomCnt-- == 0) {
+      dbg(2) << "Picked random child thread PID " << ChildThreadPID << "\n";
+      return ChildThreadPID;
+    }
+  die("No child thread found");
+  return 0;
 }
 
 void RunnerBase::closeOpenTerminal() const {
@@ -202,18 +280,20 @@ void OrigRunner::runAndWait() {
   if (!Success)
     userDie("Workload runs for a very short time. Cannot inject errors to it.");
   // This is a timing run, so block until the child has finished.
-  dbg(2) << "Waiting for ChildPID " << ChildPID << " to finish...";
-  int Status = waitpidSafe(ChildPID);
-  Dbg(2) << " Done.\n";
+  dbg(2) << "Waiting for ChildPID " << ChildPID << " to finish...\n";
+  const auto &Data = waitpidSkipThreadState();
+  int Status = Data.Status;
+  dbg(2) << "Waiting for ChildPID " << ChildPID << " Done\n";
 
   ExState.setExitState(getWaitPidExitState(Status));
-  dbg(2) << " ExitState=" << ExState.getExitState().getDumpStr() << "\n";
+  dbg(2) << "ExitState=" << ExState.getExitState().getDumpStr() << "\n";
 }
 
 FtStatus Runner::waitChildAndGetStatus() {
   // Wait until child process has finished (or early exited)
   dbg(2) << "Before waitpid()\n";
-  int WaitStatus = waitpidSafe(ChildPID);
+  const auto &Data = waitpidSkipThreadState();
+  int WaitStatus = Data.Status;
   dbg(2) << "After waitpid()\n";
   ExState.setExitState(getWaitPidExitState(WaitStatus));
 
@@ -222,8 +302,10 @@ FtStatus Runner::waitChildAndGetStatus() {
   if (SkipCheck) {
     dbg(2) << "CHECK: Skipped.\n";
     // If it is not exited, kill it.
-    if (ExState.getExitState().Type != ExitType::Exited)
+    if (ExState.getExitState().Type != ExitType::Exited) {
       ptraceSafe(PTRACE_KILL, ChildPID, 0, 0);
+      cleanupWaitpidState(ChildPID);
+    }
     return FtStatus::Skipped;
   }
 
@@ -252,6 +334,7 @@ FtStatus Runner::waitChildAndGetStatus() {
       dbg(2) << "CHECK: InfExec.\n";
       // Kill infinitely-looping child.
       ptraceSafe(PTRACE_KILL, ChildPID, 0, 0);
+      cleanupWaitpidState(ChildPID);
       return FtStatus::InfExec;
     }
     // The original run may have stopped with a signal if the original
@@ -316,19 +399,51 @@ void Runner::runAndWait() {
 
   // Wait until the child has finished.
   FaultInjectionStatus = waitChildAndGetStatus();
+
+  // Try to kill the childPID and cleanup the state.
+  ptrace(PTRACE_KILL, ChildPID, 0, 0);
+  cleanupWaitpidState(ChildPID);
+}
+
+void Runner::sleepAndStopRandomChildThread(double SleepTime, bool *Ret) {
+  // Sleep until the time comes to inject the fault.
+  dbg(2) << "Sleeping " << SleepTime << " s...\n";
+  std::this_thread::sleep_for(
+      std::chrono::milliseconds((unsigned long)(SleepTime * 1000)));
+  dbg(2) << "Sleeping " << SleepTime << " Done\n";
+
+  // Pick a random thread.
+  ChildPIDToInject = getRandomChildThreadPID();
+
+  // Now stop it with a kill().
+  dbg(2) << "About to kill " << ChildPIDToInject << " with signal " << SIGTRAP
+         << "\n";
+  // Kill can fail if the target process has finished.
+  if (kill(ChildPIDToInject, SIGTRAP) != 0) {
+    dbg(2) << "Kill failed\n";
+    *Ret = false;
+    return;
+  }
+  *Ret = true;
+  dbg(2) << "Kill done\n";
 }
 
 bool Runner::stopChildAfter(double SleepTime) {
-  // Sleep until the time comes to inject the fault.
-  dbg(2) << "Sleeping " << SleepTime << "secs...";
-  std::this_thread::sleep_for(
-      std::chrono::milliseconds((unsigned long)(SleepTime * 1000)));
-  Dbg(2) << "Done\n";
+  // Don't block for the sleep + kill, because in multi-threaded applications we
+  // need to process the spawned threads.
+  bool KillSuccess = false;
+  std::thread SleepAndKillThread(&Runner::sleepAndStopRandomChildThread, this,
+                                 SleepTime, &KillSuccess);
 
-  // Stop the child.
-  killSafe(ChildPID, SIGTRAP);
+  const auto &Data = waitpidSkipThreadState();
+  int Status = Data.Status;
+  // waitpid() is waiting for the signal sent by SleepAndKillTHread. So at this
+  // point join() will not block and will return right away.
+  SleepAndKillThread.join();
+  // Kill failed. ChildPID must have finished.
+  if (!KillSuccess)
+    return false;
 
-  int Status = waitpidSafe(ChildPID);
   ExitState ChildState = getWaitPidExitState(Status);
   if (ChildState.Type == ExitType::Exited) {
     dbg(2) << "Waited too long? Child has already exited\n";
@@ -336,6 +451,10 @@ bool Runner::stopChildAfter(double SleepTime) {
   }
   if (ChildState.Type == ExitType::Signaled) {
     dbg(2) << "Injected error too early\n";
+    // Sometimes we get both Signaled and Stopped, and in the wrong order.
+    // So try to kill the process and cleanup the state.
+    ptrace(PTRACE_KILL, ChildPID, 0, 0);
+    cleanupWaitpidState(ChildPID);
     return false;
   }
 
@@ -343,19 +462,20 @@ bool Runner::stopChildAfter(double SleepTime) {
   if (ChildState.Type != ExitType::Stopped)
     die("Child Process should be in ptrace-stopped\n");
 
-  dbg(2) << "We just interrupted " << ChildPID << "\n";
+  dbg(2) << "We just interrupted " << ChildPIDToInject << "\n";
   return true;
 }
 
 bool Runner::doBitFlip() {
   // This is where the actual fault injection takes place.
-  RegisterManipulator RM(ChildPID);
+  assert(ChildPIDToInject > 0 && "Uninitialized?");
+  RegisterManipulator RM(ChildPIDToInject);
 
   uint8_t *IP = RM.getProgramCounter();
   dbg(2) << "IP: " << (void *)IP << "\n";
 
   // Parse the address space of the child.
-  AddressSpace ChildAS(ChildPID);
+  AddressSpace ChildAS(ChildPIDToInject);
 
   // Check if we are in library
   if (DontInjectToLibs && ChildAS.isInLibrary((uint64_t)IP)) {
@@ -380,9 +500,10 @@ bool Runner::doBitFlip() {
   if (Reg.Written) {
     // Step to next instruction.
     dbg(2) << "about to SINGLESTEP\n";
-    ptraceSafe(PTRACE_SINGLESTEP, ChildPID, 0, 0);
-    int Status = waitpidSafe(ChildPID);
-    ExitState State = getWaitPidExitState(Status);
+    ptraceSafe(PTRACE_SINGLESTEP, ChildPIDToInject, 0, 0);
+    int Status;
+    const auto &StatusPid = waitpidSafe(ChildPIDToInject);
+    ExitState State = getWaitPidExitState(StatusPid.Status);
     // If we are *exteremely* unlucky, the alarm might have gone off.
     // We will just restart test run.
     if (State.Type == ExitType::Stopped && State.Val == SIGALRM)
@@ -396,7 +517,7 @@ bool Runner::doBitFlip() {
     return false;
 
   // Continue the execution.
-  ptraceSafe(PTRACE_CONT, ChildPID, 0, 0);
+  ptraceSafe(PTRACE_CONT, ChildPIDToInject, 0, 0);
 
   dbg(2) << "PTRACE_CONT\n";
   return true;
@@ -420,6 +541,7 @@ bool Runner::tryInjectFaultAt(Statistics &Stats, double InjectionTime) {
     dbg(2) << "doBitFlip() failed\n";
     // We failed to inject a bit-flip, so kill the child.
     killSafe(ChildPID, SIGKILL);
+    cleanupWaitpidState(ChildPID);
     return false;
   }
   return true;
@@ -438,8 +560,8 @@ bool Runner::systemCustom(const char *Cmd, const char *Shell) {
       die("execl() failed");
   } else {
     // Parent process.
-    int Status = waitpidSafe(ChildPID);
-    ExitState ExState = getWaitPidExitState(Status);
+    const auto &StatusPid = waitpidSafe(ChildPID);
+    ExitState ExState = getWaitPidExitState(StatusPid.Status);
     return ExState.Type == ExitType::Exited && ExState.Val == 0;
   }
   assert(0 && "Unreachable under normal operation.");

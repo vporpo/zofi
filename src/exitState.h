@@ -22,15 +22,16 @@
 
 #include <linux/limits.h>
 #include "utils.h"
+#include "debugstream.h"
 
 // The maximum file name size.
 #define FnameSz PATH_MAX
 
 enum class ExitType {
-  Invalid,
-  Exited,
-  Signaled,
-  Stopped,
+  Invalid,  ///< Unused.
+  Exited,   ///< Exited normally.
+  Signaled, ///< Terminated by a signal.
+  Stopped,  ///< Stopped by a signal.
 };
 
 /// Describes the exit state of a program, that is the type of exit (exited,
@@ -43,6 +44,8 @@ struct ExitState {
   int Val;
   ExitState(ExitType Type, int Val) : Type(Type), Val(Val) {}
   bool operator==(const ExitState &S2) const {
+    dbg(2) << "ExitState1=" << getDumpStr()
+           << " ExitState2=" << S2.getDumpStr() << "\n";
     return Type == S2.Type && Val == S2.Val;
   }
   /// Import the Type and Val from \p TypeStr and \p V.

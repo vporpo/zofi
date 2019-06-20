@@ -162,14 +162,20 @@ static inline std::pair<pid_t, int> forkptySafe() {
   return std::make_pair(PID, amaster);
 }
 
-/// Safe waitpid() wrapper that will die() on error.
-static inline int waitpidSafe(pid_t PID) {
-  int Status;
-  if (waitpid(PID, &Status, 0) == -1) {
+/// Helper structure for waitpidSafe().
+struct WaitPidData {
+  int Status; ///< The status returned by waitpid()
+  pid_t Pid;  ///< The pid returned by waitpid()
+};
+
+/// Safe waitpid() wrapper that will die() on error. \Returns status and pid.
+static inline WaitPidData waitpidSafe(pid_t PID) {
+  WaitPidData Data;
+  if ((Data.Pid = waitpid(PID, &Data.Status, 0)) == -1) {
     perror("waitpid()");
     die("waitpid() failed");
   }
-  return Status;
+  return Data;
 }
 
 /// Wrapper for open(). It will die() on failure.
@@ -323,5 +329,12 @@ static inline unsigned long getTimestamp() {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
              std::chrono::system_clock::now().time_since_epoch())
       .count() % 65536;
+}
+
+/// Cleanup state changes by popping all of them.
+static inline void cleanupWaitpidState(pid_t PID) {
+  int TmpStatus;
+  while (waitpid(PID, &TmpStatus, WNOHANG) == 0)
+    waitpidSafe(PID);
 }
 #endif // __UTILS_H__

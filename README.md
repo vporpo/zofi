@@ -135,6 +135,13 @@ Using multiple parallel jobs can speed up the evaluation significantly, as the t
 
 Please note that it is not advised to use higher jobs count than the number of threads supported by the target CPU, as this will mess with the timings of the injections.
 
+### Support for Multi-Threaded Workloads (since v0.9.4)
+ZOFI supports injecting faults to multi-threaded applications since version 0.9.4.
+The process is very similar to single-threaded fault injection.
+The main difference is that we now have to select a random running thread to inject the fault to.
+Please note that the fault injection happens only to the selected thread, the rest of them are not even stopped.
+
+
 ### Custom Diff Command
 When ZOFI checks the test run's output (stdout and stderr) against that from the original run, it uses a simple one to one comparison between them. If any discrepancy is found, it will be reported as "Corrupted" output.
 
@@ -236,11 +243,6 @@ If a workload uses signals as part of its normal operation, it may not expect to
 On such workloads ZOFI may report false results.
 
 An example of this is /bin/sleep from GNU `coreutils`, which will return right after it receives a signal from ZOFI.
-
-
-#### 3. Other limitations
-ZOFI currently only supports fault injection to single-threaded applications.
-
 
 
 ## Supported architectures

@@ -52,6 +52,9 @@ protected:
   /// The Process ID of the child process.
   pid_t ChildPID = 0;
 
+  /// The active threads of ChildPID.
+  std::set<pid_t> ChildThreads;
+
   /// The child's terminal fd, as returned by forkpty().
   int ChildTerminalFd = -1;
 
@@ -90,6 +93,16 @@ protected:
 
   /// Run the workload. Note: This is non-blocking. \Returns false on failure.
   bool run(bool TimeoutAlarm = false);
+
+  /// Wait for a state change, skipping any stops due to thread
+  /// state update. This maintains the children thread state.
+  WaitPidData waitpidSkipThreadState();
+
+  /// Debug print child threads.
+  void dumpChildThreads() const;
+
+  /// Picks a random thread out of ChildThreads and \returns its PID.
+  pid_t getRandomChildThreadPID() const;
 
   ~RunnerBase();
 
@@ -133,6 +146,9 @@ class Runner : public RunnerBase {
   /// Statistics collection.
   Statistics *Stats = nullptr;
 
+  /// The PID of the child that we are stopping for fault injection.
+  pid_t ChildPIDToInject = 0;
+
   /// Similar to system(), run \p Cmd, but using a custom \p Shell. \Returns
   /// true on success.
   static bool systemCustom(const char *Cmd, const char *Shell);
@@ -153,6 +169,10 @@ public:
 
   /// Start the injection threads. This blocks until all threads have joined.
   void launchInjectionThreads();
+
+  /// Sleep for \p SleepTime, then pick a random thread and kill it once we wake
+  /// up. \Return true in \p Ret on success.
+  void sleepAndStopRandomChildThread(double SleepTime, bool *Ret);
 
   /// Wait for \p SleepTime seconds, and stop the child.
   bool stopChildAfter(double SleepTime);
