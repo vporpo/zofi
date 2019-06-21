@@ -92,17 +92,16 @@ void JobSchedulerBase::run(unsigned long TotalNumJobs) {
 
   for (unsigned Id = 0; Id != TotalNumJobs; ++Id) {
     // Block until we can spawn a new process.
-    while (ActiveJobs.size() == Jobs.getValue())
+    while (ActiveJobs.size() == Jobs.getValue()) {
       waitForJob();
-
+      // Update the progress bar. Don't display it for Verbose > 1 as it will
+      // mess up the dumps.
+      if (ShowingBar)
+        Bar.display(++BarCnt);
+    }
     Dbg(2) << "-------------------------\n";
     dbg(2) << "Job " << Id << " begin\n";
     Dbg(2) << "-------------------------\n";
-
-    // Update the progress bar. Don't display it for Verbose > 1 as it will mess
-    // up the dumps.
-    if (ShowingBar)
-      Bar.display(BarCnt++);
 
     // Set up a pipe for communication from child to parent.
     pipeSafe(Pipe);
@@ -137,7 +136,7 @@ void JobSchedulerBase::run(unsigned long TotalNumJobs) {
   while (ActiveJobs.size() > 0) {
     waitForJob();
     if (ShowingBar)
-      Bar.display(BarCnt++);
+      Bar.display(++BarCnt);
   }
   if (ShowingBar)
     Bar.finalize();

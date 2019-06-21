@@ -26,7 +26,7 @@ ProgressBar::ProgressBar(unsigned long Max, unsigned Size, std::ostream &OS)
   P25 = (Size * 25) / 100;
   P50 = (Size * 50) / 100;
   P75 = (Size * 75) / 100;
-  P100 = Size - 1;
+  P100 = Size;
 }
 
 void ProgressBar::drawCounter(unsigned long Cnt) const {
@@ -42,6 +42,7 @@ void ProgressBar::drawCounter(unsigned long Cnt) const {
   OS << std::right << std::setw(CounterSize) << Cnt << "/" << std::left
      << std::setw(CounterSize) << Max << ": ";
   OS.flush();
+  return;
 }
 
 void ProgressBar::clearLineAndCR() const {
@@ -53,7 +54,7 @@ void ProgressBar::clearLineAndCR() const {
 }
 
 void ProgressBar::draw(unsigned End, const char *C) {
-  for (unsigned Cnt = 0; Cnt < End; ++Cnt) {
+  for (unsigned Cnt = 0; Cnt <= End; ++Cnt) {
     // Print percentage every 25%.
     if (Cnt == P0)
       OS << "0%";
