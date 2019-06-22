@@ -64,27 +64,30 @@ static inline void printBacktrace() {
   backtrace_symbols_fd(Buf, 20, STDERR_FILENO);
 }
 
-template <typename T> static inline void dieBase(const T &Val) {
+template <typename T> static inline void dieBase(bool PrintBt, const T &Val) {
   std::cerr << Val << "\n";
-  printBacktrace();
-  abort();
+  if (PrintBt) {
+    printBacktrace();
+    abort();
+  } else
+    exit(1);
 }
 
 /// Print arguments and exit with exit code 1.
 template <typename T, typename... Ts>
-static inline void dieBase(const T &Val1, const Ts... Vals) {
+static inline void dieBase(bool PrintBt, const T &Val1, const Ts... Vals) {
   std::cerr << Val1;
-  dieBase(Vals...);
+  dieBase(PrintBt, Vals...);
 }
 
 /// Exit the program, reporting a bug.
 #define die(...)                                                               \
-  dieBase("Error in ", __FILE__, ":", __LINE__, " ", __FUNCTION__,             \
-          "(): ", __VA_ARGS__,                                                 \
+  dieBase(true /*Print Backtrace*/, "Error in ", __FILE__, ":", __LINE__, " ", \
+          __FUNCTION__, "(): ", __VA_ARGS__,                                   \
           "\n\n*** Please submit a bug report with the following data ***\n")
 
 /// Program exit due to user error.
-#define userDie(...) dieBase(__VA_ARGS__)
+#define userDie(...) dieBase(false /* No Backtrace */, __VA_ARGS__)
 
 template <typename T> static inline void warningBase(const T &Val) {
   std::cerr << Val << "\n";
