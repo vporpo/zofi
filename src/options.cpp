@@ -176,7 +176,7 @@ void OptionsParser::init(int argc, char **argv) {
   // Print options and exit.
   if (HelpOption) {
     OptionsParser::usage();
-    exit(1);
+    exit(0);
   }
 
   // Check if any of the required arguments are missing.
@@ -283,17 +283,60 @@ void OptionsParser::addOption(OptionBase *Opt) {
   dbg(3) << "addOption() " << Opt->getFlag() << "\n";
 }
 
+/// \Returns true if \p C is a good canditate for line splitting.
+static bool isLineSplitCandidate(char C) {
+  switch (C) {
+  case ' ':
+  case '\0':
+  case ',':
+    return true;
+  default:
+    return false;
+  }
+}
+
 void OptionsParser::printAllOptions() const {
   size_t maxFlagW = 0;
   for (auto &it : OptionsMap)
     maxFlagW = std::max(maxFlagW, it.first.size());
 
+  char DescrSubstr[80];
   for (auto &it : OptionsMap) {
     const std::string &flag = it.first;
     OptionBase *Opt = it.second;
-    std::cerr << " " << std::left << std::setw(maxFlagW) << flag << " : "
-              << Opt->getDescription() << "\n";
+    // Pretty print the options: the description does not wrap around.
+    unsigned MaxSubstrLen = 80 - (maxFlagW + strlen(" : ") + 1);
+    assert(MaxSubstrLen > 40 && "Some flag is too long! We need at least 40 "
+                                "columns for the description.");
+    unsigned DescrLen = strlen(Opt->getDescription());
+    unsigned PrintedSubstrLen = 0;
+    while (PrintedSubstrLen < DescrLen) {
+      std::cerr << " " << std::left << std::setw(maxFlagW);
+      // Only the first line prints the flag, the rest print spaces.
+      std::cerr << (PrintedSubstrLen == 0 ? flag.c_str() : " ");
+      std::cerr << (PrintedSubstrLen == 0 ? " : " : "   ");
+
+      // Now print part of the description.
+      // For pretty-printing we split the description at the last space.
+      int LastSpaceIdx = (DescrLen - PrintedSubstrLen >= MaxSubstrLen - 1)
+                             ? MaxSubstrLen - 1
+                             : DescrLen - PrintedSubstrLen;
+      assert(LastSpaceIdx >= 0 && "Please fix the option description. It "
+                                  "cannot be split to fit 80-columns.");
+      for (; LastSpaceIdx >= 0; LastSpaceIdx--)
+        if (isLineSplitCandidate(
+                Opt->getDescription()[PrintedSubstrLen + LastSpaceIdx]))
+          break;
+
+      unsigned SubstrLen = LastSpaceIdx + 1;
+      memcpy((void *)DescrSubstr,
+             (void *)&Opt->getDescription()[PrintedSubstrLen], SubstrLen);
+      DescrSubstr[SubstrLen] = '\0';
+      std::cerr << DescrSubstr << "\n";
+      PrintedSubstrLen += SubstrLen;
+    }
   }
+  std::cerr << "\n";
 }
 
 void OptionsParser::dump(std::ostream &OS) const {
