@@ -25,34 +25,33 @@ Skip this section if capstone 4.0.1 is already installed on your system:
     $ cd capstone-4.0.1/ && ./make.sh && sudo make install
 ```
 
-Download and build ZOFI:
+Download, build and install ZOFI:
 
 ```sh
     $ git clone https://github.com/vporpo/zofi
     $ cd zofi
     $ mkdir build && cd build
-    $ cmake ../src/ && make -j
+    $ cmake ../src/ && make -j && sudo make install
 ```
+Please note that ZOFI can run straight from your build directory, so you could skip `&& sudo make install`.
 
 Note: For a debug build, replace the last line with:
 
 ```sh
-    $ cmake -DCMAKE_BUILD_TYPE=Debug ../src/ && make -j
+    $ cmake -DCMAKE_BUILD_TYPE=Debug ../src/ && make -j && sudo make install
 ```
 
 #### Run
-If all went well, you can now run ZOFI directly from the build directory:
+If all went well, you can now run ZOFI:
+
+```sh
+    $ zofi -help
+```
+
+Or if you did not install it on your system, you can run it straight from the build directory:
 
 ```sh
     $ ./zofi -help
-```
-
-
-#### Install
-Otherwise you can install it on your system:
-
-```sh
-    $ sudo make install
 ```
 
 # Getting Started (Quick Howto)
