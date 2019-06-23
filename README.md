@@ -35,10 +35,10 @@ Download, build and install ZOFI:
 ```
 Please note that ZOFI can run straight from your build directory, so you could skip `&& sudo make install`.
 
-Note: For a debug build, replace the last line with:
+Note: For a debug build you need to pass the `-DCMAKE_BUILD_TYPE=Debug` parameter to cmake:
 
 ```sh
-    $ cmake -DCMAKE_BUILD_TYPE=Debug ../src/ && make -j && sudo make install
+    $ cmake -DCMAKE_BUILD_TYPE=Debug ../src/
 ```
 
 #### Run
