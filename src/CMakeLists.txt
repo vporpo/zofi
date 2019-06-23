@@ -48,3 +48,5 @@ set_property(TARGET zofi PROPERTY CXX_STANDARD_REQUIRED ON)
 set(TEST_DIR ${PROJECT_SOURCE_DIR}/../test/)
 set(ZIT_DIR ${TEST_DIR}/zit_tests)
 add_custom_target(check COMMAND ${TEST_DIR}/zit -s ${ZIT_DIR}/*.c ${ZIT_DIR}/*.cpp)
+
+install(TARGETS zofi DESTINATION /usr/local/bin/)
