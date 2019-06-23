@@ -119,6 +119,9 @@ private:
   /// except for some registers like x86 ah where this is 4.
   int getStartBit(const std::string &R) const;
 
+  /// \Returns the size of register \p R in bits.
+  int getBits(const std::string &R) const;
+
   /// Return the register that corresponds to REGSTR
   const RegData &getRegDataForStrSafe(const std::string &regStr) const;
 

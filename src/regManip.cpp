@@ -64,6 +64,11 @@ int RegisterManipulator::getStartBit(const std::string &R) const {
   return Data.getStartBit();
 }
 
+int RegisterManipulator::getBits(const std::string &R) const {
+  const RegData &Data = getRegDataForStrSafe(R);
+  return Data.getBits();
+}
+
 void *RegisterManipulator::getRegisterPtr(const std::string &R, int Bit) {
   const RegData &Data = getRegDataForStrSafe(R);
   auto *RegField = Data.getRegPtr();
@@ -231,9 +236,7 @@ RegisterManipulator::getInstrRegisters(uint8_t *ChildIP) {
       case X86_OP_REG: {
         std::string RegStr(cs_reg_name(handle, Operand.reg));
         int StartBit = getStartBit(RegStr);
-        if (StartBit < 0)
-          continue;
-        RegDescr RDescr(RegStr, StartBit, Operand.size * 8);
+        RegDescr RDescr(RegStr, StartBit, getBits(RegStr));
         if (Operand.access & CS_AC_WRITE) {
           RDescr.Written = true;
           WRegs.push_back(RDescr);
@@ -251,9 +254,7 @@ RegisterManipulator::getInstrRegisters(uint8_t *ChildIP) {
             continue;
           std::string RegStr(cs_reg_name(handle, Reg));
           int StartBit = getStartBit(RegStr);
-          if (StartBit < 0)
-            continue;
-          RegDescr RDescr(RegStr, StartBit, Operand.size * 8,
+          RegDescr RDescr(RegStr, StartBit, getBits(RegStr),
                           false /* Written */);
           RRegs.push_back(RDescr);
           AllRegs.push_back(RDescr);
