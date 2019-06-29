@@ -313,6 +313,12 @@ This is the command line syntax of the Zit tool:
 - `-cxx /path/to/cxx` Override the C++ compiler path.
 - `-help` Prints a brief help message.
 
+# Research / Further Reading / Paper
+For a high-level description of the design, a comparison against other techniques and a case study on NPB2.3 please refer to the paper:
+
+[**"ZOFI: Zero-Overhead Fault Injection Tool for Fast Transient Fault Coverage Analysis"**](<https://arxiv.org/pdf/1906.09390>), Vasileios Porpodas, arXiv:1906.09390, 2019
+[bib](http://vporpo.me/papers/zofi_2019.bib)
+
 # Disclaimer
 
 ZOFI is under development, so please expect it to fail.
