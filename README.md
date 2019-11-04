@@ -183,7 +183,7 @@ ZOFI supports disabling fault injection to .so libraries that are dynamically li
 
 #### 1. Selecting the number of jobs -j N
 
-##### i. Multi-Threding
+##### i. Multi-Threading
 Most modern machines implement Simultaneous Multi-Threading (SMT), which support more logical cores than the actual physical cores (usually twice as many).
 It is advised to set the number of jobs no higher than the number of physical cores.
 Otherwise, the timings may be affected considerably and that could affect the randomness of the experiments.
