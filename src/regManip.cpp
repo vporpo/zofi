@@ -23,6 +23,7 @@
 #include <capstone/capstone.h>
 #include <cstdio>
 #include <cstring>
+#include <sstream>
 
 void RegDescr::dump(std::ostream &OS) const {
   OS << "<Reg: " << Name << " StartBit:" << StartBit << " Bits:" << Bits << " "
