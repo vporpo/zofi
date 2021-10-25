@@ -110,7 +110,7 @@ public:
     Val = InitVal;
     needsValue = getNeedsValue<T>();
   }
-  void setValueFromStr(const char *StrVal) {
+  void setValueFromStr(const char *StrVal) override {
     Val = getValForStr<T>(StrVal);
     IsSet = true;
   }

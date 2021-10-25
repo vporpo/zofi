@@ -57,8 +57,8 @@ bool ExecutionExitState::isSet() const {
 
 void ExecutionExitState::initFiles(long Id) {
   // Open the Stdout and Stderr file descriptors.
-  snprintf(StdoutFile, FnameSz, "%s.%d.XXXXXX", Stdout.getValue().c_str(), Id);
-  snprintf(StderrFile, FnameSz, "%s.%d.XXXXXX", Stderr.getValue().c_str(), Id);
+  snprintf(StdoutFile, FnameSz, "%s.%ld.XXXXXX", Stdout.getValue().c_str(), Id);
+  snprintf(StderrFile, FnameSz, "%s.%ld.XXXXXX", Stderr.getValue().c_str(), Id);
   StdoutFd = mkstempSafe(StdoutFile);
   StderrFd = mkstempSafe(StderrFile);
 }
