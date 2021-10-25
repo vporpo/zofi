@@ -53,7 +53,7 @@ version() {
 }
 usage() {
     echo "Usage: \
-$(basename ${0}) <test.zit> \
+$(basename ${0}) <zit test> \
 [-zofi /path/to/zofi] \
 [-cc /path/to/c/compiler] \
 [-cxx /path/to/c++/compiler] \

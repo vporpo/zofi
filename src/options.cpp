@@ -30,11 +30,12 @@
 OptionsParser Options;
 
 // List of command line arguments.
-Option<std::string> InjectTo("-inject-to", "rwe",
-                             "Inject errors to: registers read(r), written(w), "
-                             "explicitly(e) accessed or implicitly(i) accessed "
-                             "registers, control-flow(c) or other(o) "
-                             "instructions");
+Option<std::string> InjectTo(
+    "-inject-to", "rwe",
+    "Inject errors to: registers read(r) or written(w). "
+    "You can select between explicitly(e) and/or implicitly(i) accessed "
+    "registers and/or the instruction pointer (c and/or o). Using `c` accepts "
+    "only control-flow instructions, while `o` accepts all others.");
 Option<const char *> Binary("-bin", 0, "The binary to inject faults into.");
 Option<const char **> Args("-args", 0,
                            "The command line arguments for the binary. "
@@ -234,8 +235,10 @@ void OptionsParser::sanityChecks() {
   if (!isIn(InjectTo, "r") && !isIn(InjectTo, "w"))
     userDie("No read (r) or write (w) registers selected for injection: ",
             InjectTo.getValue(), ".");
-  if (!isIn(InjectTo, "e") && !isIn(InjectTo, "i"))
-    userDie("No explicit (e) / implicit(i) registers selectied: ",
+  if (!isIn(InjectTo, "e") && !isIn(InjectTo, "i") && !isIn(InjectTo, "c") &&
+      !isIn(InjectTo, "o"))
+    userDie("No explicit (e) / implicit(i) registers or Instr. pointer (c or "
+            "o) selectied: ",
             InjectTo.getValue(), ".");
 }
 

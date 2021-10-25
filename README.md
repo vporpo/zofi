@@ -118,16 +118,21 @@ ZOFI supports various types of fault injections with the `-inject-to <TYPE STRIN
 
 2. Inject to explicitly(`e`) or implicitly(`i`) accessed registers. A large number of x86 instructions will clobber registers that are not explicitly stated in the assembly code, such as the zero flag. The default option allows only the explicitly(`e`) accessed.
 
-3. Inject errors to the instruction pointer if the current instruction is a control-flow(`c`) instruction, or other(`o`) type of instruction. ZOFI will not inject to either of them by default.
+3. Inject errors to the instruction pointer (`c`). ZOFI will not inject faults to the instruction pointer by default.
 
 |Option | Inject to                       |
 |-------|---------------------------------|
 | `r`   | Registers read by instruction |
 | `w`   | Registers written by instruction |
+|       |                               |
 | `e`   | Explicitly accessed registers |
 | `i`   | Implicitly accessed registers |
 | `c`   | Instruction pointer if a control instruction|
 | `o`   | Instruction pointer if not a control instruction|
+
+For example, using `rwco` will inject faults to the instruction pointer, regardless of whether the target instruction is a control-flow instruction (like a jump) or not.
+Using `rwc` will only inject faults to the instruction pointer if the target is a control-flow instruction (it will keep retrying until it lands on a control-flow instruction).
+
 
 ### Multiple Test Runs in Parallel
 ZOFI supports running multiple test runs in parallel to speed up the fault injection process.
