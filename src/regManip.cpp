@@ -18,7 +18,7 @@
 
 #include "regManip.h"
 #include "debugstream.h"
-#include "options.h"
+#include "optionsList.h"
 #include "utils.h"
 #include <capstone/capstone.h>
 #include <cstdio>

@@ -18,7 +18,7 @@
 
 #include "statistics.h"
 #include "debugstream.h"
-#include "options.h"
+#include "optionsList.h"
 #include "utils.h"
 #include <cassert>
 #include <fstream>

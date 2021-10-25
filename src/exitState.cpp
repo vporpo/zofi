@@ -18,7 +18,7 @@
 
 #include <sstream>
 #include "exitState.h"
-#include "options.h"
+#include "optionsList.h"
 
 std::ostream &ExitState::dump(std::ostream &OS) const {
   OS << "{";

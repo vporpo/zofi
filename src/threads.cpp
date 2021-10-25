@@ -17,7 +17,7 @@
 // <http://www.gnu.org/licenses/>.
 
 #include "threads.h"
-#include "options.h"
+#include "optionsList.h"
 #include "progressbar.h"
 #include "runner.h"
 #include "statistics.h"

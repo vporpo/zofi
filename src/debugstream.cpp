@@ -19,7 +19,7 @@
 
 #include <iostream>
 #include "debugstream.h"
-#include "options.h"
+#include "optionsList.h"
 
 Dbg::Dbg(int MsgLevel, std::ostream &OS)
   : OS(OS), ProgramVerboseLevel(VerboseLevel), MsgLevel(MsgLevel) {}

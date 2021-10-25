@@ -19,7 +19,7 @@
 #define _DEBUG
 #include "config.h"
 #include "debugstream.h"
-#include "options.h"
+#include "optionsList.h"
 #include "runner.h"
 #include "threads.h"
 #include "utils.h"
