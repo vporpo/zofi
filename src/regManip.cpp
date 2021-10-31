@@ -354,24 +354,35 @@ bool RegisterManipulator::tryBitFlip(const std::string &Reg, unsigned Bit) {
 
   importRegistersTo(gpregs, vecregs);
 
+  if (VerboseLevel >= 10) {
+    dbg(10) << "=== Before bitflip ===\n";
+    dump();
+  }
+
   uint8_t OldByte;
   bool Success;
-  std::tie(OldByte, Success) = getRegisterContents<uint8_t>(Reg);
+  std::tie(OldByte, Success) = getRegisterContents<uint8_t>(Reg, Bit);
   if (!Success)
     die("getRegisterContents() should never fail");
 
   int BitInByte = Bit % 8;
   uint8_t NewByte = OldByte ^ (1 << BitInByte);
-  bool Legal = setRegisterContents(Reg, NewByte, BitInByte);
+  bool Legal = setRegisterContents(Reg, NewByte, Bit);
   if (!Legal)
     return false;
   dbg(2) << "Flip reg: " << Reg << ", bit: " << Bit << ", (=" << BitInByte
-         << " in Byte). Byte before: " << (int)OldByte
-         << ", after: " << (int)NewByte << "\n";
+         << " in Byte). Byte before: 0x" << std::setfill('0') << std::setw(2)
+         << std::hex << (uint32_t)OldByte << ", after: 0x" << std::setfill('0')
+         << std::setw(2) << std::hex << (uint32_t)NewByte << "\n";
   // Writing to illegal registers can fail.
   bool ExportSuccess = exportRegisters();
+  if (VerboseLevel >= 10) {
+    dbg(10) << "=== After bitflip ===\n";
+    dump();
+  }
   return ExportSuccess;
 }
+
 
 void RegisterManipulator::dumpMachine() {
   // Read registers into gpregs2 and vecregs2, so that we do not destroy the
@@ -393,9 +404,17 @@ void RegisterManipulator::dumpMachine() {
 void RegisterManipulator::dump() {
 #undef DEF_REG
 #define DEF_REG(REG, REG_FIELD, START_BIT, BITS)                               \
-  if (REG_FIELD)                                                               \
-    fprintf(stderr, "%12s: 0x%016lx\n", #REG, *(unsigned long *)REG_FIELD);    \
-  else                                                                         \
-    fprintf(stderr, "%12s: Unsupported\n", #REG);
+  fprintf(stderr, "%12s: ", #REG);                                             \
+  if (REG_FIELD) {                                                             \
+    fprintf(stderr, "0x");                                                     \
+    for (int Byte = BITS / 8 - 1; Byte >= START_BIT / 8; --Byte) {             \
+      fprintf(stderr, "%02x", ((uint8_t *)REG_FIELD)[Byte]);                   \
+      if (Byte % 8 == 0)                                                       \
+        fprintf(stderr, " ");                                                  \
+    }                                                                          \
+  } else {                                                                     \
+    fprintf(stderr, "Unsupported");                                            \
+  }                                                                            \
+  fprintf(stderr, "\n");
 #include "regs.def"
 }
