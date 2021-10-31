@@ -133,6 +133,14 @@ ZOFI supports various types of fault injections with the `-inject-to <TYPE STRIN
 For example, using `rwco` will inject faults to the instruction pointer, regardless of whether the target instruction is a control-flow instruction (like a jump) or not.
 Using `rwc` will only inject faults to the instruction pointer if the target is a control-flow instruction (it will keep retrying until it lands on a control-flow instruction).
 
+### Force inject to specific register
+Unlike `-inject-to` which will inject to registers being accessed by the currently executed instructions, `-force-inject-to-reg` will inject a fault to the specified register. For example:
+```sh
+    $ zofi -force-inject-to-reg rax ...
+```
+For a complete list of registers please use `-force-inject-to-reg help`.
+
+Note: This feature is available since version 0.9.7.
 
 ### Multiple Test Runs in Parallel
 ZOFI supports running multiple test runs in parallel to speed up the fault injection process.

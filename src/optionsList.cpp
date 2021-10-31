@@ -15,6 +15,11 @@ Option<std::string> InjectTo(
     "You can select between explicitly(e) and/or implicitly(i) accessed "
     "registers and/or the instruction pointer (c and/or o). Using `c` accepts "
     "only control-flow instructions, while `o` accepts all others.");
+Option<std::string>
+    ForceInjectToReg("-force-inject-to-reg", "",
+                  "Force fault injection to a specific register, regardless of "
+                  "whether the current instruction accesses it or not. Pass "
+                  "'help' for a list of available registers.");
 Option<const char *> Binary("-bin", 0, "The binary to inject faults into.");
 Option<const char **> Args("-args", 0,
                            "The command line arguments for the binary. "

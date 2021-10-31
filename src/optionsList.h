@@ -11,6 +11,7 @@
 #include "options.h"
 
 extern Option<std::string> InjectTo;
+extern Option<std::string> ForceInjectToReg;
 extern Option<const char *> Binary;
 extern Option<const char **> Args;
 extern Option<unsigned> InjectionsPerRun;

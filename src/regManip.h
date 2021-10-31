@@ -250,7 +250,8 @@ private:
   int getBits(const std::string &R) const;
 
   /// Return the register that corresponds to REGSTR
-  const RegData &getRegDataForStrSafe(const std::string &regStr) const;
+  const RegData &getRegDataForStrSafe(const std::string &RegStr,
+                                      bool UserError = false) const;
 
   /// \Returns the registers and their size in bits accessed by the instruction
   /// at \p IP.
@@ -278,9 +279,10 @@ public:
   /// Flip the \p Bit of \p Reg. \Returns true on success.
   bool tryBitFlip(const std::string &Reg, unsigned Bit);
 
-  /// \Returns a random register in the instruction at \p IP and a randomb bit
-  /// in it. Returns false on failure.
-  std::tuple<RegDescr, unsigned, bool> getRandomRegAndBit(uint8_t *IP);
+  /// \Returns the register (either a random from the accessed one, or a forced
+  /// user-specified register) and bit where the fault will be injected to.
+  /// Returns false on failure.
+  std::tuple<RegDescr, unsigned, bool> getSelectedRegAndBit(uint8_t *IP);
 
   /// Returns the program counter.
   uint8_t *getProgramCounter();

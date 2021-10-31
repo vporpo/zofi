@@ -135,6 +135,9 @@ class OptionsParser {
   /// Check if the arguments good values, or die.
   void sanityChecks();
 
+  /// Early help messages.
+  void helpMessages();
+
   /// Parses \p argc and \p argv and initializes Option objects.
   void parse(int argc, char **argv);
 

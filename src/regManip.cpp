@@ -126,10 +126,15 @@ bool RegisterManipulator::setRegisterContents(const std::string &R, uint8_t Val,
 }
 
 const RegData &
-RegisterManipulator::getRegDataForStrSafe(const std::string &RegStr) const {
+RegisterManipulator::getRegDataForStrSafe(const std::string &RegStr,
+                                          bool UserError) const {
   auto it = StrToRegMap.find(RegStr);
-  if (it == StrToRegMap.end())
-    die("Unknown register: ", RegStr, ".");
+  if (it == StrToRegMap.end()) {
+    if (UserError)
+      userDie("Unknown register: ", RegStr, ".");
+    else
+      die("Unknown register: ", RegStr, ".");
+  }
   return it->second;
 }
 
@@ -310,17 +315,26 @@ RegisterManipulator::getInstrRegisters(uint8_t *ChildIP) {
 }
 
 std::tuple<RegDescr, unsigned, bool>
-RegisterManipulator::getRandomRegAndBit(uint8_t *IP) {
+RegisterManipulator::getSelectedRegAndBit(uint8_t *IP) {
   // 1. Get the registers accessed by the current instruction.
   RegsVec WRegs, RRegs, AllRegs;
   std::tie(WRegs, RRegs, AllRegs) = getInstrRegisters(IP);
 
-  // 2. Pick a random register written by the instruction.
-  assert((isIn(InjectTo, "r") || isIn(InjectTo, "w")) &&
-         "At least one of 'r', 'w' should be enabled");
-  RegsVec &RegsVec = (isIn(InjectTo, "r") && isIn(InjectTo, "w"))
-                         ? AllRegs
-                         : isIn(InjectTo, "r") ? RRegs : WRegs;
+  // 2. Pick a register. If forced, selecte the forced one, otherwise select a
+  // random one written by the instruction.
+  RegsVec RegsVec;
+  if (ForceInjectToReg.isSet()) {
+    const std::string &ForcedReg = ForceInjectToReg.getValue();
+    const RegData &RData = getRegDataForStrSafe(ForcedReg, /*UserError=*/true);
+    RegsVec = {RegDescr(ForcedReg, RData.getStartBit(), RData.getBits())};
+  } else {
+    assert((isIn(InjectTo, "r") || isIn(InjectTo, "w")) &&
+           "At least one of 'r', 'w' should be enabled");
+    RegsVec = (isIn(InjectTo, "r") && isIn(InjectTo, "w")) ? AllRegs
+              : isIn(InjectTo, "r")                        ? RRegs
+                                                           : WRegs;
+  }
+
   if (RegsVec.empty())
     return std::make_tuple(RegDescr(), 0, false);
 

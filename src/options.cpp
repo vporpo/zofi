@@ -122,6 +122,11 @@ void OptionsParser::init(int argc, char **argv) {
 OptionsParser::OptionsParser() {}
 
 void OptionsParser::sanityChecks() {
+  // Cannot have both -inject-to and -force-inject-to-reg.
+  if (InjectTo.isSet() && ForceInjectToReg.isSet())
+    userDie("Cannot enable both `-inject-to` and `-force-inject-to-reg` at the "
+            "same time.");
+
   // Check -inject-to
   for (char C : InjectTo.getValue()) {
     switch (C) {
@@ -145,6 +150,16 @@ void OptionsParser::sanityChecks() {
     userDie("No explicit (e) / implicit(i) registers or Instr. pointer (c or "
             "o) selectied: ",
             InjectTo.getValue(), ".");
+}
+
+void OptionsParser::helpMessages() {
+  // Print help message for -force-inject-to-reg help.
+  if (ForceInjectToReg.isSet() && ForceInjectToReg.getValue() == "help") {
+#undef DEF_REG
+#define DEF_REG(REG, REG_FIELD, START_BIT, BITS) std::cout << #REG << "\n";
+#include "regs.def"
+    userDie("");
+  }
 }
 
 void OptionsParser::parse(int argc, char **argv) {
@@ -184,6 +199,8 @@ void OptionsParser::parse(int argc, char **argv) {
   }
 
   sanityChecks();
+
+  helpMessages();
 }
 
 void OptionsParser::addOption(OptionBase *Opt) {

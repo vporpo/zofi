@@ -486,7 +486,7 @@ bool Runner::doBitFlip() {
   RegDescr Reg;
   unsigned Bit;
   bool Success;
-  std::tie(Reg, Bit, Success) = RM.getRandomRegAndBit(IP);
+  std::tie(Reg, Bit, Success) = RM.getSelectedRegAndBit(IP);
   // This can fail for instructions accessing no registers, like jne.
   if (!Success) {
     dbg(2) << "failed to get random reg and bit\n";
