@@ -20,6 +20,10 @@ Option<std::string>
                   "Force fault injection to a specific register, regardless of "
                   "whether the current instruction accesses it or not. Pass "
                   "'help' for a list of available registers.");
+Option<std::string> ForceInjectToBit(
+    "-force-inject-to-bit", "",
+    "Force fault injection to the specified bit. To get a list of the legal "
+    "bits for each register please pass 'help'.");
 Option<const char *> Binary("-bin", 0, "The binary to inject faults into.");
 Option<const char **> Args("-args", 0,
                            "The command line arguments for the binary. "

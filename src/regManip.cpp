@@ -338,16 +338,26 @@ RegisterManipulator::getSelectedRegAndBit(uint8_t *IP) {
   if (RegsVec.empty())
     return std::make_tuple(RegDescr(), 0, false);
 
-  unsigned RandReg = randSafe(RegsVec.size());
-  const RegDescr &Reg = RegsVec[RandReg];
+  unsigned SelectedReg = ForceInjectToReg.isSet() ? 0 : randSafe(RegsVec.size());
+  const RegDescr &Reg = RegsVec[SelectedReg];
 
   // 3. Pick a random bit.
-  unsigned StartBit = RegsVec[RandReg].StartBit;
-  unsigned Bits = RegsVec[RandReg].Bits;
-  unsigned RandBit = StartBit + randSafe(Bits);
-  assert(RandBit >= StartBit && RandBit < StartBit + Bits && "Bad RandBit");
+  unsigned StartBit = RegsVec[SelectedReg].StartBit;
+  unsigned Bits = RegsVec[SelectedReg].Bits;
+  unsigned SelectedBit;
+  if (ForceInjectToBit.isSet()) {
+    SelectedBit = strtolSafe(ForceInjectToBit.getValue().c_str());
+    // If the user has not forced a register, then this may be out of bounds.
+    // In this case we will have to retry.
+    if (!(SelectedBit >= StartBit && SelectedBit < StartBit + Bits))
+      return std::make_tuple(Reg, SelectedBit, false);
+  } else {
+    SelectedBit = StartBit + randSafe(Bits);
+  }
+  assert(SelectedBit >= StartBit && SelectedBit < StartBit + Bits &&
+         "Bad RandBit");
 
-  return std::make_tuple(Reg, RandBit, true);
+  return std::make_tuple(Reg, SelectedBit, true);
 }
 
 uint8_t *RegisterManipulator::getProgramCounter() {

@@ -379,9 +379,12 @@ void Runner::runAndWait() {
   do {
     if (--Attempts == 0) {
       Stats->dump();
-      userDie("Error: Failed to inject after " +
-              std::to_string(MaxInjectionAttempts) +
-              " attempts. Is the execution time of the binary too short?");
+      userDie("Error: Failed to inject after ",
+              std::to_string(MaxInjectionAttempts), " attempts.\n",
+              "Error: Is the execution time of the binary too short?\n",
+              "Error: You may also try increasing ",
+              MaxInjectionAttempts.getFlag(), " (currently set to ",
+              MaxInjectionAttempts.getValue(), ").\n");
     }
     // Start an injection run. Note: This is non-blocking.
     bool Success = run(true /* Timeout Alarm */);

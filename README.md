@@ -142,6 +142,18 @@ For a complete list of registers please use `-force-inject-to-reg help`.
 
 Note: This feature is available since version 0.9.7.
 
+### Force inject to specific bit
+`-force-inject-to-bit` forces the fault to be injected to a specific bit. If not forced, the bit is selected at random. You can get the valid bit range for each register with `-force-inject-to-bit help`.
+
+This option can be used in combination with `-force-inject-to-reg`. It may also be used without it, but in that case the forced bit may be out of range because the register (picked at random) may be narrower. If this happens, the injector will keep retrying to inject a fault to some other instruction, until the bit is in range. There is a limit to the number of retries which can be overridden using `-max-injection-attempts`.
+
+Example:
+```sh
+    $ zofi -force-inject-to-reg rax -force-inject-to-bit 42 ...
+```
+
+Note: This feature is available since version 0.9.7.
+
 ### Multiple Test Runs in Parallel
 ZOFI supports running multiple test runs in parallel to speed up the fault injection process.
 The number of parallel jobs is controlled with the `-j` switch which defaults to 1.

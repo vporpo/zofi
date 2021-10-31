@@ -124,8 +124,8 @@ OptionsParser::OptionsParser() {}
 void OptionsParser::sanityChecks() {
   // Cannot have both -inject-to and -force-inject-to-reg.
   if (InjectTo.isSet() && ForceInjectToReg.isSet())
-    userDie("Cannot enable both `-inject-to` and `-force-inject-to-reg` at the "
-            "same time.");
+    userDie("Cannot enable both '", InjectTo.getFlag(), "' and '",
+            ForceInjectToReg.getFlag(), "' at the same time.");
 
   // Check -inject-to
   for (char C : InjectTo.getValue()) {
@@ -150,6 +150,33 @@ void OptionsParser::sanityChecks() {
     userDie("No explicit (e) / implicit(i) registers or Instr. pointer (c or "
             "o) selectied: ",
             InjectTo.getValue(), ".");
+
+  // Check ForceInjectToBit:
+  if (ForceInjectToBit.isSet()) {
+    const std::string &ForcedBit = ForceInjectToBit.getValue();
+    if (ForcedBit != "help") {
+      // It must be an integer >= 0.
+      bool IsNum;
+      long ForceBitNum = strtolCheck(ForcedBit, IsNum);
+      if (!IsNum || ForceBitNum < 0)
+        userDie("Bad option '", ForceInjectToBit.getValue(), "' passed to ",
+                ForceInjectToBit.getFlag(), ".");
+
+      // If used along with ForceInjectToReg, check if out of bounds.
+      if (ForceInjectToReg.isSet()) {
+#undef DEF_REG
+#define DEF_REG(REG, REG_FIELD, START_BIT, BITS)                               \
+  if (ForceInjectToReg.getValue() == #REG &&                                   \
+      ForceBitNum >= START_BIT + BITS) {                                       \
+    userDie("Error: ", ForceInjectToBit.getFlag(), " bit '", ForceBitNum,      \
+            "' is out of range.\n", "The valid bit-range for ",                \
+            ForceInjectToReg.getValue(), " is ", START_BIT, "-",               \
+            START_BIT + BITS - 1, ".\n");                                      \
+  }
+#include "regs.def"
+      }
+    }
+  }
 }
 
 void OptionsParser::helpMessages() {
@@ -157,6 +184,19 @@ void OptionsParser::helpMessages() {
   if (ForceInjectToReg.isSet() && ForceInjectToReg.getValue() == "help") {
 #undef DEF_REG
 #define DEF_REG(REG, REG_FIELD, START_BIT, BITS) std::cout << #REG << "\n";
+#include "regs.def"
+    userDie("");
+  }
+
+  if (ForceInjectToBit.isSet() && ForceInjectToBit.getValue() == "help") {
+    std::cout << std::setw(10) << std::left << "Register"
+              << " "
+              << "Bit range\n";
+    std::cout << "--------------------\n";
+#undef DEF_REG
+#define DEF_REG(REG, REG_FIELD, START_BIT, BITS)                               \
+  std::cout << std::setw(10) << std::left << #REG << " " << START_BIT << "-"   \
+            << START_BIT + BITS - 1 << "\n";
 #include "regs.def"
     userDie("");
   }

@@ -263,6 +263,17 @@ static inline bool fileExists(const char *File) {
 #define STRFY(s) XSTRFY(s)
 #define XSTRFY(s) #s
 
+/// Converts \p Str to a long integer. Sets \p Valid to false if not an integer.
+static inline long strtolCheck(const std::string &Str, bool &Success) {
+  char *EndPtr = nullptr;
+  long Val = strtol(Str.c_str(), &EndPtr, 10);
+  Success = false;
+  if (*Str.c_str() == '\0' || *EndPtr != '\0')
+    return 0;
+  Success = true;
+  return Val;
+}
+
 /// Save strtoul() with error reporting.
 static inline unsigned long strtoulSafe(const char *Str) {
   char *EndPtr = nullptr;
@@ -273,7 +284,7 @@ static inline unsigned long strtoulSafe(const char *Str) {
 }
 
 /// Save strtol() with error reporting.
-static inline unsigned long strtolSafe(const char *Str) {
+static inline long strtolSafe(const char *Str) {
   char *EndPtr = nullptr;
   long Val = strtol(Str, &EndPtr, 10);
   if (*Str == '\0' || *EndPtr != '\0')

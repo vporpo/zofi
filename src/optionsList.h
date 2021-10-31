@@ -12,6 +12,7 @@
 
 extern Option<std::string> InjectTo;
 extern Option<std::string> ForceInjectToReg;
+extern Option<std::string> ForceInjectToBit;
 extern Option<const char *> Binary;
 extern Option<const char **> Args;
 extern Option<unsigned> InjectionsPerRun;
