@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <execinfo.h>
 #include <fcntl.h>
 #include <iomanip>
 #include <iostream>
@@ -36,7 +37,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
-#include <execinfo.h>
+#if defined (__linux__)
+#include <linux/elf.h>
+#else
+#error Unsupported OS
+#endif
 
 extern bool debugFlag;
 
@@ -64,7 +69,8 @@ static inline void printBacktrace() {
   backtrace_symbols_fd(Buf, 20, STDERR_FILENO);
 }
 
-template <typename T> static inline void dieBase(bool PrintBt, const T &Val) {
+template <typename T>
+[[noreturn]] static inline void dieBase(bool PrintBt, const T &Val) {
   std::cerr << Val << "\n";
   if (PrintBt) {
     printBacktrace();
@@ -75,7 +81,8 @@ template <typename T> static inline void dieBase(bool PrintBt, const T &Val) {
 
 /// Print arguments and exit with exit code 1.
 template <typename T, typename... Ts>
-static inline void dieBase(bool PrintBt, const T &Val1, const Ts... Vals) {
+[[noreturn]] static inline void dieBase(bool PrintBt, const T &Val1,
+                                        const Ts... Vals) {
   std::cerr << Val1;
   dieBase(PrintBt, Vals...);
 }

@@ -24,6 +24,9 @@
 #include <cstdio>
 #include <cstring>
 #include <sstream>
+#if ! defined (__x86_64__)
+#error Unsupported target. ZOFI currently supports only x86_64.
+#endif
 
 void RegDescr::dump(std::ostream &OS) const {
   OS << "<Reg: " << Name << " StartBit:" << StartBit << " Bits:" << Bits << " "
@@ -41,22 +44,49 @@ void RegDescr::dump() const {
   std::cerr << "\n";
 }
 
-void RegisterManipulator::importRegisters() {
-  ptraceSafe(PTRACE_GETREGS, ChildPid, nullptr, &gpregs);
-  ptraceSafe(PTRACE_GETFPREGS, ChildPid, nullptr, &fpregs);
+VecRegsState::VecRegsState() {
+  memset(&xsave, 0, sizeof(xsave));
+  memset(zmm, 0, sizeof(zmm));
+}
+
+void VecRegsState::importData() {
+  for (uint32_t Reg = 0; Reg != NumZMMRegs; ++Reg)
+    for (uint32_t Byte = 0; Byte != ZMMBytes; ++Byte)
+      zmm[Reg][Byte] = xsave.getZMM(Reg, Byte);
+}
+
+void VecRegsState::exportData() {
+  for (uint32_t Reg = 0; Reg != NumZMMRegs; ++Reg)
+    for (uint32_t Byte = 0; Byte != ZMMBytes; ++Byte)
+      xsave.setZMM(Reg, Byte, zmm[Reg][Byte]);
 }
 
 void RegisterManipulator::importRegistersTo(user_regs_struct &GpRegs,
-                                            user_fpregs_struct &FpRegs) {
+                                            VecRegsState &VecRegs) {
   ptraceSafe(PTRACE_GETREGS, ChildPid, nullptr, &GpRegs);
-  ptraceSafe(PTRACE_GETFPREGS, ChildPid, nullptr, &FpRegs);
+
+  // PTRACE_GETFPREGS is limited to XMM vector regs.
+  // For full access we need to use PTRACE_GETREGSET.
+  struct iovec iov;
+  iov.iov_base = (uint8_t *)&VecRegs.xsave;
+  iov.iov_len = sizeof(VecRegs.xsave);
+  ptrace(PTRACE_GETREGSET, ChildPid, NT_X86_XSTATE, &iov);
+  VecRegs.importData();
 }
 
 bool RegisterManipulator::exportRegisters() const {
-  if (ptrace(PTRACE_SETREGS, ChildPid, nullptr, &gpregs) == -1)
+  if (ptrace(PTRACE_SETREGS, ChildPid, nullptr, &gpregs) == -1) {
+    dbg(3) << "ptrace(PTRACE_SETREGS) failed\n";
     return false;
-  if (ptrace(PTRACE_SETFPREGS, ChildPid, nullptr, &fpregs) == -1)
+  }
+
+  struct iovec iov;
+  iov.iov_base = (uint8_t *)&vecregs.xsave;
+  iov.iov_len = sizeof(vecregs.xsave);
+  if (ptrace(PTRACE_SETREGSET, ChildPid, NT_X86_XSTATE, &iov) == -1) {
+    dbg(3) << "ptrace(PTRACE_SETREGSET) failed\n";
     return false;
+  }
   return true;
 }
 
@@ -111,7 +141,7 @@ RegisterManipulator::RegisterManipulator(int ChildPid) : ChildPid(ChildPid) {
 #include "regs.def"
   // 2. Initialize data
   memset(&gpregs, 0, sizeof(gpregs));
-  memset(&fpregs, 0, sizeof(fpregs));
+  // vecregs contents get initialized in its constructor.
 }
 
 // Return true if Instr
@@ -308,7 +338,7 @@ RegisterManipulator::getRandomRegAndBit(uint8_t *IP) {
 
 uint8_t *RegisterManipulator::getProgramCounter() {
   // We get the Child's Instruction Pointer by looking at its rip register.
-  importRegisters();
+  importRegistersTo(gpregs, vecregs);
   uint8_t *ChildIP;
   bool Success;
   std::tie(ChildIP, Success) = getRegisterContents<uint8_t *>("rip");
@@ -322,7 +352,7 @@ bool RegisterManipulator::tryBitFlip(const std::string &Reg, unsigned Bit) {
   //                                or zmm2, bit 46 to xmm_space[17] bit 14
   assert(StrToRegMap.count(Reg) && "Missing register from map");
 
-  importRegisters();
+  importRegistersTo(gpregs, vecregs);
 
   uint8_t OldByte;
   bool Success;
@@ -344,13 +374,13 @@ bool RegisterManipulator::tryBitFlip(const std::string &Reg, unsigned Bit) {
 }
 
 void RegisterManipulator::dumpMachine() {
-  // Read registers into gpregs2 and fpregs2, so that we do not
-  // destroy the state of the class
+  // Read registers into gpregs2 and vecregs2, so that we do not destroy the
+  // state of the class.
   user_regs_struct gpregs2;
-  user_fpregs_struct fpregs2;
+  VecRegsState vecregs2;
   memset(&gpregs2, 0, sizeof(gpregs2));
-  memset(&fpregs2, 0, sizeof(fpregs2));
-  importRegistersTo(gpregs2, fpregs2);
+  importRegistersTo(gpregs2, vecregs2);
+
 #undef DEF_REG
 #define DEF_REG(REG, REG_FIELD, START_BIT, BITS)                               \
   if (REG_FIELD)                                                               \
