@@ -55,7 +55,7 @@ void Statistics::incr(Type S) {
     ULongMap[S]++;
     break;
   default:
-    assert(0 && "Bad type");
+    die("Bad type");
   }
 
   // Increment the counter only for the non-failed runs.
@@ -80,7 +80,7 @@ template <> void Statistics::set<unsigned long>(Type S, unsigned long Val) {
     ULongMap[S] = Val;
     break;
   default:
-    assert(0 && "Bad type");
+    die("Bad type");
   }
 }
 
@@ -92,7 +92,7 @@ template <> void Statistics::set<double>(Type S, double Val) {
     DoubleMap[S] = Val;
     break;
   default:
-    assert(0 && "Bad type");
+    die("Bad type");
   }
 }
 
@@ -117,7 +117,7 @@ std::string Statistics::getStr(Type S) {
   case Type::InjectTo:
     return StringMap.at(S);
   default:
-    assert(0 && "Bad type");
+    die("Bad type");
   }
 }
 
